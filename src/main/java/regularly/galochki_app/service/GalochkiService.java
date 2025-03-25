@@ -1,7 +1,10 @@
 package regularly.galochki_app.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import regularly.galochki_app.model.GalochkiPage;
+import regularly.galochki_app.xmlhandler.GalochkiXmlHandler;
+import regularly.galochki_app.xmlhandler.GalochkiXmlHandlerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -9,14 +12,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+@Service
 public class GalochkiService {
+
     private static final String BASE_PATH = "data/sections/";
 
     @Autowired
-    private XmlMapper xmlMapper;
+    private ItogService itogService;
 
     @Autowired
-    private ItogService itogService;
+    private GalochkiXmlHandler xmlHandler;
 
     public void createSection(String sectionName) throws IOException {
         Path sectionPath = Paths.get(BASE_PATH, sectionName);
@@ -30,7 +35,7 @@ public class GalochkiService {
             throw new FileNotFoundException("Page not found: " + filePath);
         }
 
-        GalochkiPage page = xmlMapper.readValue(filePath.toFile(), GalochkiPage.class);
+        GalochkiPage page = xmlHandler.read(filePath);
 
         if (page.getPage().isDailyItog()) {
             itogService.calculateDailyItog(page);
@@ -44,6 +49,6 @@ public class GalochkiService {
 
         Files.createDirectories(filePath.getParent());
 
-        xmlMapper.writeValue(filePath.toFile(), page);
+        xmlHandler.write(filePath, page);
     }
 }
