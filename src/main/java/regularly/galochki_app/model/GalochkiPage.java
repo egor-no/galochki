@@ -9,4 +9,5 @@ public class GalochkiPage {
     private Page page;
     private List<Activity> activities;
     private List<GalochkaDay> galochki;
+    private List<Double> dailyItog;
 }
