@@ -2,16 +2,14 @@ package regularly.galochki_app.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import regularly.galochki_app.model.GalochkiPage;
-import regularly.galochki_app.service.GalochkiService;
-
-import java.util.List;
+import regularly.galochki_app.service.GalochkiFileService;
 
 @RestController
 @RequestMapping("/api/sections")
 public class GalochkiController {
 
     @Autowired
-    private GalochkiService galochkiService;
+    private GalochkiFileService galochkiService;
 
     // 1. Create a new section
     @PostMapping("/{sectionName}")

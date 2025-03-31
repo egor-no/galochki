@@ -13,40 +13,42 @@ public class ItogService {
 
     public void calculateDailyItog(GalochkiPage page) {
 
-        if (page.getPage().getType() == PageType.MIXED) {
-            if (!isMixedPageNormalized(page.getActivities())) {
-                page.getPage().setDailyItog(false);
-                page.setDailyItog(null);
-                return;
-            }
-        }
-
-        List<Double> results = new ArrayList<>();
-
-        for (GalochkaDay day : page.getGalochki()) {
-            double sum = 0.0;
-
-            List<Galochka> values = day.getGalochkas();
-            List<Activity> activities = page.getActivities();
-
+        page.getGalochki().forEach(week -> {
             if (page.getPage().getType() == PageType.MIXED) {
-                for (int i = 0; i < values.size(); i++) {
-                    if (activities.get(i).getType() == ActivityType.NUMERIC) {
-                        sum += galochkizeNumeric(values.get(i).getValue(), activities.get(i).getDailyNorm());
-                    } else {
+                if (!isMixedPageNormalized(week.getActivities())) {
+                    page.getPage().setDailyItog(false);
+                    week.setDailyItog(null);
+                    return;
+                }
+            }
+
+            List<Double> results = new ArrayList<>();
+
+            for (GalochkiDay day : week.getGalochki()) {
+                double sum = 0.0;
+
+                List<Galochka> values = day.getGalochkas();
+                List<Activity> activities = week.getActivities();
+
+                if (page.getPage().getType() == PageType.MIXED) {
+                    for (int i = 0; i < values.size(); i++) {
+                        if (activities.get(i).getType() == ActivityType.NUMERIC) {
+                            sum += galochkizeNumeric(values.get(i).getValue(), activities.get(i).getDailyNorm());
+                        } else {
+                            sum += values.get(i).getValue();
+                        }
+                    }
+                } else {
+                    for (int i = 0; i < values.size(); i++) {
                         sum += values.get(i).getValue();
                     }
                 }
-            } else {
-                for (int i = 0; i < values.size(); i++) {
-                    sum += values.get(i).getValue();
-                }
+
+                results.add(sum);
             }
 
-            results.add(sum);
-        }
-
-        page.setDailyItog(results);
+            week.setDailyItog(results);
+        });
     }
 
     private boolean isMixedPageNormalized(List<Activity> activities) {

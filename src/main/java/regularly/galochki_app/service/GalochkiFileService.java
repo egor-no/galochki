@@ -1,8 +1,8 @@
 package regularly.galochki_app.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import regularly.galochki_app.model.GalochkiPage;
+import regularly.galochki_app.model.GalochkiXmlFile;
 import regularly.galochki_app.xmlhandler.GalochkiXmlHandler;
 import regularly.galochki_app.xmlhandler.GalochkiXmlHandlerFactory;
 
@@ -13,15 +13,20 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 @Service
-public class GalochkiService {
+public class GalochkiFileService {
 
     private static final String BASE_PATH = "data/sections/";
 
-    @Autowired
-    private ItogService itogService;
+    private final GalochkiXmlHandler xmlHandler;
+    private final GalochkiPageBuilder pageBuilder;
 
-    @Autowired
-    private GalochkiXmlHandler xmlHandler;
+    public GalochkiFileService(
+            GalochkiXmlHandlerFactory handlerFactory,
+            GalochkiPageBuilder pageBuilder
+    ) {
+        this.xmlHandler = handlerFactory.getXmlHandler(); // get the actual implementation (e.g. Jackson)
+        this.pageBuilder = pageBuilder; // Spring will autowire this one
+    }
 
     public void createSection(String sectionName) throws IOException {
         Path sectionPath = Paths.get(BASE_PATH, sectionName);
@@ -35,20 +40,22 @@ public class GalochkiService {
             throw new FileNotFoundException("Page not found: " + filePath);
         }
 
-        GalochkiPage page = xmlHandler.read(filePath);
-
-        if (page.getPage().isDailyItog()) {
-            itogService.calculateDailyItog(page);
-        }
+        GalochkiXmlFile rawFile = xmlHandler.read(filePath);
+        GalochkiPage page = pageBuilder.build(
+                rawFile.getPage(),
+                rawFile.getGalochki()
+        );
 
         return page;
     }
 
     public void savePage(String sectionName, String yearMonth, GalochkiPage page) throws IOException {
-        Path filePath = Paths.get(BASE_PATH, sectionName, yearMonth + ".xml");
+        Path filePath = Paths.get("data/sections", sectionName, yearMonth + ".xml");
 
         Files.createDirectories(filePath.getParent());
 
-        xmlHandler.write(filePath, page);
+        GalochkiXmlFile file = new GalochkiXmlFile(page.getPage(), page.getGalochki());
+
+        xmlHandler.write(filePath, file);
     }
 }

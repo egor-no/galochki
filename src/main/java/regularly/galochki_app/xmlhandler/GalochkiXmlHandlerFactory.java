@@ -24,7 +24,7 @@ public class GalochkiXmlHandlerFactory {
     }
 
     @Bean
-    public GalochkiXmlHandler galochkiXmlHandler() {
+    public GalochkiXmlHandler getXmlHandler() {
         return selectedHandler;
     }
 }
