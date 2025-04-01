@@ -57,7 +57,7 @@ public class GalochkiFileService {
 
         GalochkiXmlFile file = new GalochkiXmlFile(
                 page.getPage(),
-                page.getActivites(),
+                page.getActivities(),
                 page.getGalochki()
         );
 

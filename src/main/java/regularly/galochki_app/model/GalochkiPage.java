@@ -7,6 +7,6 @@ import java.util.List;
 @Data
 public class GalochkiPage {
     private Page page;
-    private List<Activity> activites;
+    private List<Activity> activities;
     private List<GalochkiWeek> galochki;
 }

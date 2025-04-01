@@ -19,7 +19,7 @@ public class GalochkiPageBuilder {
     public GalochkiPage build(Page page, List<Activity> activites, List<GalochkiWeek> weeks) {
         GalochkiPage result = new GalochkiPage();
         result.setPage(page);
-        result.setActivites(activites);
+        result.setActivities(activites);
         result.setGalochki(weeks);
 
         itogService.calculateDailyItog(result);

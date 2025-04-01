@@ -1,0 +1,39 @@
+<xml>
+    <page
+            name="Test Page"
+            type="mixed"
+            daily-itog="true"
+            weekly-itog="false"
+            daily-norm="5.0"
+            weekly-norm="25.0"
+    />
+
+    <activities>
+        <activity name="Read" type="numeric" daily-norm="60" weekly-norm="300" periodicity="1" />
+        <activity name="Workout" type="galochki" daily-norm="1" weekly-norm="5" periodicity="2" />
+        <activity name="Journal" type="boolean" />
+    </activities>
+
+    <galochki-week>
+        <overflow value="1.0" />
+        <galochki-day day="1">
+            <galochka value="30" />
+            <galochka value="1" />
+            <galochka value="1" />
+        </galochki-day>
+        <galochki-day day="2">
+            <galochka value="90" />
+            <galochka value="0" />
+            <galochka value="0" />
+        </galochki-day>
+    </galochki-week>
+
+    <galochki-week>
+        <overflow value="0.0" />
+        <galochki-day day="8">
+            <galochka value="60" />
+            <galochka value="1" />
+            <galochka value="1" />
+        </galochki-day>
+    </galochki-week>
+</xml>

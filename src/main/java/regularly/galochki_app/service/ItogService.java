@@ -15,7 +15,7 @@ public class ItogService {
 
         page.getGalochki().forEach(week -> {
             if (page.getPage().getType() == PageType.MIXED) {
-                if (!isMixedPageNormalized(week.getActivities())) {
+                if (!isMixedPageNormalized(page.getActivities())) {
                     page.getPage().setDailyItog(false);
                     week.setDailyItog(null);
                     return;
@@ -28,7 +28,7 @@ public class ItogService {
                 double sum = 0.0;
 
                 List<Galochka> values = day.getGalochki();
-                List<Activity> activities = week.getActivities();
+                List<Activity> activities = page.getActivities();
 
                 if (page.getPage().getType() == PageType.MIXED) {
                     for (int i = 0; i < values.size(); i++) {

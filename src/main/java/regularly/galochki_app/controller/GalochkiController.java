@@ -1,35 +1,48 @@
 package regularly.galochki_app.controller;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import regularly.galochki_app.model.GalochkiPage;
 import regularly.galochki_app.service.GalochkiFileService;
 
+import java.io.IOException;
+
 @RestController
-@RequestMapping("/api/sections")
+@RequestMapping("/api/page")
 public class GalochkiController {
 
+    private final GalochkiFileService fileService;
+
     @Autowired
-    private GalochkiFileService galochkiService;
-
-    // 1. Create a new section
-    @PostMapping("/{sectionName}")
-    public void createSection(@PathVariable String sectionName) {
-        galochkiService.createSection(sectionName);
+    public GalochkiController(GalochkiFileService fileService) {
+        this.fileService = fileService;
     }
 
-    // 2. Load a page (month XML)
-    @GetMapping("/{sectionName}/pages/{yearMonth}")
-    public GalochkiPage loadPage(@PathVariable String sectionName,
-                                 @PathVariable String yearMonth) {
-        return galochkiService.loadPage(sectionName, yearMonth);
+    @GetMapping(value = "/{section}/{month}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<GalochkiPage> loadPage(
+            @PathVariable String section,
+            @PathVariable String month
+    ) {
+        try {
+            GalochkiPage page = fileService.loadPage(section, month);
+            return ResponseEntity.ok(page);
+        } catch (IOException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
-    // 3. Save the entire page after editing
-    @PostMapping("/{sectionName}/pages/{yearMonth}")
-    public void savePage(@PathVariable String sectionName,
-                         @PathVariable String yearMonth,
-                         @RequestBody GalochkiPage page) {
-        // build page logics
-        galochkiService.savePage(sectionName, yearMonth, page);
+    @PostMapping("/{section}/{month}")
+    public ResponseEntity<Void> savePage(
+            @PathVariable String section,
+            @PathVariable String month,
+            @RequestBody GalochkiPage page
+    ) {
+        try {
+            fileService.savePage(section, month, page);
+            return ResponseEntity.ok().build();
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

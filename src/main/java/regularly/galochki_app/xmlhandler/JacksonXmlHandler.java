@@ -1,5 +1,7 @@
 package regularly.galochki_app.xmlhandler;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -11,11 +13,12 @@ import java.nio.file.Path;
 @Service
 public class JacksonXmlHandler implements GalochkiXmlHandler {
 
-    @Autowired
     private final XmlMapper xmlMapper;
 
-    public JacksonXmlHandler(XmlMapper xmlMapper) {
-        this.xmlMapper = xmlMapper;
+    public JacksonXmlHandler() {
+        xmlMapper= new XmlMapper();
+        xmlMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        xmlMapper.enable(SerializationFeature.INDENT_OUTPUT);
     }
 
     @Override
