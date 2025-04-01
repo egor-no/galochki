@@ -27,7 +27,7 @@ public class ItogService {
             for (GalochkiDay day : week.getGalochki()) {
                 double sum = 0.0;
 
-                List<Galochka> values = day.getGalochkas();
+                List<Galochka> values = day.getGalochki();
                 List<Activity> activities = week.getActivities();
 
                 if (page.getPage().getType() == PageType.MIXED) {

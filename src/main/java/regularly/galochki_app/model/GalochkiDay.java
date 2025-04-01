@@ -7,5 +7,5 @@ import java.util.List;
 @Data
 public class GalochkiDay {
     private int day; // day of the month
-    private List<Galochka> galochkas; // one per activity
+    private List<Galochka> galochki; // one per activity
 }

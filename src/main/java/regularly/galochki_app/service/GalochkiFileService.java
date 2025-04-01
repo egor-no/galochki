@@ -43,6 +43,7 @@ public class GalochkiFileService {
         GalochkiXmlFile rawFile = xmlHandler.read(filePath);
         GalochkiPage page = pageBuilder.build(
                 rawFile.getPage(),
+                rawFile.getActivites(),
                 rawFile.getGalochki()
         );
 
@@ -54,7 +55,11 @@ public class GalochkiFileService {
 
         Files.createDirectories(filePath.getParent());
 
-        GalochkiXmlFile file = new GalochkiXmlFile(page.getPage(), page.getGalochki());
+        GalochkiXmlFile file = new GalochkiXmlFile(
+                page.getPage(),
+                page.getActivites(),
+                page.getGalochki()
+        );
 
         xmlHandler.write(filePath, file);
     }

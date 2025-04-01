@@ -11,11 +11,12 @@ public class GalochkiXmlHandlerFactory {
 
     public GalochkiXmlHandlerFactory(
             @Value("${galochki.xml.handler:jackson}") String type,
-            JacksonXmlHandler jacksonHandler
+            JacksonXmlHandler jacksonHandler,
+            DomXmlHandler domHandler
             // Add DOM, SAX, etc. when needed
     ) {
         this.selectedHandler = switch (type.toLowerCase()) {
-            case "dom" -> throw new UnsupportedOperationException("DOM not implemented yet");
+            case "dom" -> domHandler;
             case "sax" -> throw new UnsupportedOperationException("SAX not implemented yet");
             case "jaxb" -> throw new UnsupportedOperationException("JAXB not implemented yet");
             case "jackson", "default" -> jacksonHandler;

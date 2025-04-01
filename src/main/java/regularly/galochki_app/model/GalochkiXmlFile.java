@@ -11,5 +11,6 @@ import java.util.List;
 @NoArgsConstructor
 public class GalochkiXmlFile {
     private Page page;
+    private List<Activity> activites;
     private List<GalochkiWeek> galochki;
 }
