@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import regularly.galochki_app.model.GalochkiPage;
 import regularly.galochki_app.service.GalochkiFileService;
+import regularly.galochki_app.service.GalochkiSectionService;
 
 import java.io.IOException;
 
@@ -14,10 +15,12 @@ import java.io.IOException;
 public class GalochkiController {
 
     private final GalochkiFileService fileService;
+    private final GalochkiSectionService sectionService;
 
     @Autowired
-    public GalochkiController(GalochkiFileService fileService) {
+    public GalochkiController(GalochkiFileService fileService, GalochkiSectionService sectionService) {
         this.fileService = fileService;
+        this.sectionService = sectionService;
     }
 
     @GetMapping(value = "/{section}/{month}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -31,6 +34,11 @@ public class GalochkiController {
         } catch (IOException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @GetMapping("/api/page/new/")
+    public ResponseEntity<GalochkiPage> createNewPage() {
+        return ResponseEntity.ok(sectionService.createNewPage());
     }
 
     @PostMapping("/{section}/{month}")

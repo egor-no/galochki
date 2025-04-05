@@ -39,13 +39,6 @@ public class GalochkiPageBuilder {
             int activityCount,
             YearMonth yearMonth
     ) {
-
-        //fill existing days and weeks
-        //iterate through all days of the month
-        //if the first day of the week is Thursday or earlier then add remaining days
-        //if the last day of the week is Thursday or later then add remianing days
-        //create empty days for days that are not in file
-
         Map<LocalDate, GalochkiDay> dayMap = new HashMap<>();
         for (GalochkiWeek week : existingWeeks) {
             for (GalochkiDay day : week.getGalochkiDays()) {
