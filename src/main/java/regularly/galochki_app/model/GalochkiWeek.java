@@ -7,7 +7,7 @@ import java.util.List;
 @Data
 public class GalochkiWeek {
 
-    private List<GalochkiDay> galochki;
+    private List<GalochkiDay> galochkiDays;
     private List<Double> dailyItog;
     private Double overflow;
 

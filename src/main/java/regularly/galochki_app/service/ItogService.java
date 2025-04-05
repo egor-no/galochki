@@ -24,7 +24,7 @@ public class ItogService {
 
             List<Double> results = new ArrayList<>();
 
-            for (GalochkiDay day : week.getGalochki()) {
+            for (GalochkiDay day : week.getGalochkiDays()) {
                 double sum = 0.0;
 
                 List<Galochka> values = day.getGalochki();

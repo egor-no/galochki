@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.YearMonth;
 
 @Service
 public class GalochkiFileService {
@@ -19,13 +20,16 @@ public class GalochkiFileService {
 
     private final GalochkiXmlHandler xmlHandler;
     private final GalochkiPageBuilder pageBuilder;
+    private final GalochkiPageSerializer pageSerializer;
 
     public GalochkiFileService(
             GalochkiXmlHandlerFactory handlerFactory,
-            GalochkiPageBuilder pageBuilder
+            GalochkiPageBuilder pageBuilder,
+            GalochkiPageSerializer pageSerializer
     ) {
-        this.xmlHandler = handlerFactory.getXmlHandler(); // get the actual implementation (e.g. Jackson)
-        this.pageBuilder = pageBuilder; // Spring will autowire this one
+        this.xmlHandler = handlerFactory.getXmlHandler();
+        this.pageBuilder = pageBuilder;
+        this.pageSerializer = pageSerializer;
     }
 
     public void createSection(String sectionName) throws IOException {
@@ -33,33 +37,31 @@ public class GalochkiFileService {
         Files.createDirectories(sectionPath);
     }
 
-    public GalochkiPage loadPage(String sectionName, String yearMonth) throws IOException {
-        Path filePath = Paths.get(BASE_PATH, sectionName, yearMonth + ".xml");
+    public GalochkiPage loadPage(String sectionName, String yearMonthStr) throws IOException {
+        Path filePath = Paths.get(BASE_PATH, sectionName, yearMonthStr + ".xml");
 
         if (!Files.exists(filePath)) {
             throw new FileNotFoundException("Page not found: " + filePath);
         }
 
         GalochkiXmlFile rawFile = xmlHandler.read(filePath);
+        YearMonth yearMonth = YearMonth.parse(yearMonthStr);
+
         GalochkiPage page = pageBuilder.build(
                 rawFile.getPage(),
                 rawFile.getActivites(),
-                rawFile.getGalochki()
+                rawFile.getGalochki(),
+                yearMonth
         );
 
         return page;
     }
 
     public void savePage(String sectionName, String yearMonth, GalochkiPage page) throws IOException {
-        Path filePath = Paths.get("data/sections", sectionName, yearMonth + ".xml");
-
+        Path filePath = Paths.get(BASE_PATH, sectionName, yearMonth + ".xml");
         Files.createDirectories(filePath.getParent());
 
-        GalochkiXmlFile file = new GalochkiXmlFile(
-                page.getPage(),
-                page.getActivities(),
-                page.getGalochki()
-        );
+        GalochkiXmlFile file = pageSerializer.serialize(page);
 
         xmlHandler.write(filePath, file);
     }

@@ -1,7 +1,5 @@
 package regularly.galochki_app.xmlhandler;
 
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -17,6 +15,8 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,8 +40,11 @@ public class DomXmlHandler implements GalochkiXmlHandler {
             Element activitiesElement = (Element) root.getElementsByTagName(XmlTags.ACTIVITIES).item(0);
             List<Activity> activities = parseActivities(activitiesElement);
 
+            String filename = path.getFileName().toString().replace(".xml", "");
+            YearMonth yearMonth = YearMonth.parse(filename);
+
             NodeList weekNodes = root.getElementsByTagName(XmlTags.GALOCHKI_WEEK);
-            List<GalochkiWeek> weeks = parseWeeks(weekNodes);
+            List<GalochkiWeek> weeks = parseWeeks(weekNodes, yearMonth, activities.size());
 
             GalochkiXmlFile result = new GalochkiXmlFile();
             result.setPage(page);
@@ -169,7 +172,7 @@ public class DomXmlHandler implements GalochkiXmlHandler {
         parent.appendChild(activitiesElement);
     }
 
-    private List<GalochkiWeek> parseWeeks(NodeList weekNodes) {
+    private List<GalochkiWeek> parseWeeks(NodeList weekNodes, YearMonth yearMonth, int activityCount) {
         List<GalochkiWeek> weeks = new ArrayList<>();
 
         for (int i = 0; i < weekNodes.getLength(); i++) {
@@ -190,8 +193,13 @@ public class DomXmlHandler implements GalochkiXmlHandler {
             for (int d = 0; d < dayNodes.getLength(); d++) {
                 Element dayElement = (Element) dayNodes.item(d);
                 GalochkiDay day = new GalochkiDay();
+
                 String dayAttr = dayElement.getAttribute(XmlTags.DAY);
-                day.setDay(dayAttr.isEmpty() ? -1 : Integer.parseInt(dayAttr));
+                if (!dayAttr.isEmpty()) {
+                    int dayOfMonth = Integer.parseInt(dayAttr);
+                    LocalDate fullDate = yearMonth.atDay(dayOfMonth);
+                    day.setDay(fullDate);
+                }
 
                 NodeList galochkaNodes = dayElement.getElementsByTagName(XmlTags.GALOCHKA);
                 List<Galochka> galochkas = new ArrayList<>();
@@ -210,7 +218,7 @@ public class DomXmlHandler implements GalochkiXmlHandler {
                 days.add(day);
             }
 
-            week.setGalochki(days);
+            week.setGalochkiDays(days);
             weeks.add(week);
         }
 
@@ -227,9 +235,11 @@ public class DomXmlHandler implements GalochkiXmlHandler {
                 weekElement.appendChild(overflowEl);
             }
 
-            for (GalochkiDay day : week.getGalochki()) {
+            for (GalochkiDay day : week.getGalochkiDays()) {
                 Element dayElement = doc.createElement(XmlTags.GALOCHKI_DAY);
-                dayElement.setAttribute(XmlTags.DAY, String.valueOf(day.getDay()));
+
+                int dayOfMonth = day.getDay().getDayOfMonth();
+                dayElement.setAttribute(XmlTags.DAY, String.valueOf(dayOfMonth));
 
                 for (Galochka galochka : day.getGalochki()) {
                     Element galochkaEl = doc.createElement(XmlTags.GALOCHKA);
