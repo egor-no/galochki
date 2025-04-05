@@ -1,0 +1,55 @@
+import React, { useEffect, useState } from 'react';
+
+function App() {
+  const [page, setPage] = useState(null);
+
+  useEffect(() => {
+    fetch('http://localhost:8080/api/page/test-section/2025-04')
+      .then(res => res.json())
+      .then(setPage)
+      .catch(err => console.error('Failed to load page:', err));
+  }, []);
+
+  if (!page) return <p>Loading Galochki...</p>;
+
+  return (
+    <div style={{ padding: '2rem' }}>
+      <h1>{page.page.name}</h1>
+      <table border="1" cellPadding="8">
+        <thead>
+          <tr>
+            <th>Activity</th>
+            {page.galochki.map((week, wi) =>
+              week.galochki.map((day, di) => (
+                <th key={`${wi}-${di}`}>Day {day.day}</th>
+              ))
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {page.activites.map((activity, ai) => (
+            <tr key={ai}>
+              <td>{activity.name}</td>
+              {page.galochki.map((week) =>
+                week.galochki.map((day) => {
+                  const galochka = day.galochkas[ai];
+                  return (
+                    <td key={day.day}>
+                      {activity.type === 'BOOLEAN' || activity.type === 'GALOCHKI' ? (
+                        <input type="checkbox" checked={galochka.value > 0} readOnly />
+                      ) : (
+                        <input type="number" value={galochka.value} readOnly />
+                      )}
+                    </td>
+                  );
+                })
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default App;
