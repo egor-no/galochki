@@ -32,7 +32,7 @@ public class MonthPageService {
     }
 
     public MonthPageDto build(Long pageId, YearMonth yearMonth) {
-        GalochkiPage page = pageService.getById(pageId);
+        GalochkiPage page = pageService.getByIdForCurrentOwner(pageId);
 
         List<Activity> activities = activityService.getActiveActivitiesByPage(pageId);
 
@@ -51,10 +51,10 @@ public class MonthPageService {
 
         List<DayDto> days = buildDays(yearMonth);
         List<ActivityRowDto> rows = buildRows(activities, days, galochkaMap);
-        List<PageOptionDto> pageOptions = pageService.getAllPages().stream()
+        List<PageOptionDto> pageOptions = pageService.getAllPagesForCurrentOwner().stream()
                 .map(p -> new PageOptionDto(p.getId(), p.getTitle()))
                 .toList();
-        
+
         return new MonthPageDto(
                 page.getId(),
                 page.getTitle(),

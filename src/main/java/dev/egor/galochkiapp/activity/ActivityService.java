@@ -23,8 +23,8 @@ public class ActivityService {
     }
 
     public Activity create(Long pageId, String title) {
-        GalochkiPage page = pageService.getById(pageId);
-
+        GalochkiPage page = pageService.getByIdForCurrentOwner(pageId);
+        
         Activity activity = new Activity();
         activity.setPage(page);
         activity.setTitle(title);

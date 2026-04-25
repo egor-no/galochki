@@ -28,14 +28,14 @@ public class MonthPageController {
                         @RequestParam(required = false) Integer month,
                         Model model) {
 
-        if (!pageService.hasPages()) {
+        if (!pageService.hasPagesForCurrentOwner()) {
             model.addAttribute("weekDays", DayOfWeek.values());
             return "create-page";
         }
 
         GalochkiPage selectedPage = pageId != null
-                ? pageService.getById(pageId)
-                : pageService.getFirstPage();
+                ? pageService.getByIdForCurrentOwner(pageId)
+                : pageService.getFirstPageForCurrentOwner();
 
         YearMonth yearMonth = year != null && month != null
                 ? YearMonth.of(year, month)

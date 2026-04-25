@@ -17,6 +17,9 @@ public class GalochkiPage {
 
     private String title;
 
+    @Column(name = "owner_id", nullable = false)
+    private Long ownerId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "week_start_day")
     private DayOfWeek weekStartDay = DayOfWeek.MONDAY;
@@ -46,5 +49,13 @@ public class GalochkiPage {
 
     public void setWeekStartDay(DayOfWeek weekStartDay) {
         this.weekStartDay = weekStartDay;
+    }
+
+    public Long getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(Long ownerId) {
+        this.ownerId = ownerId;
     }
 }

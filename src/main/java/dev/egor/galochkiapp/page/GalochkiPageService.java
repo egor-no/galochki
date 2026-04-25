@@ -8,18 +8,24 @@ import java.util.List;
 @Service
 public class GalochkiPageService {
 
+    private static final Long TEMP_USER_ID = 1L;
+
     private final GalochkiPageRepository pageRepository;
 
     public GalochkiPageService(GalochkiPageRepository pageRepository) {
         this.pageRepository = pageRepository;
     }
 
-    public List<GalochkiPage> getAllPages() {
-        return pageRepository.findAll();
+    public Long getCurrentOwnerId() {
+        return TEMP_USER_ID;
     }
 
-    public GalochkiPage getById(Long id) {
-        return pageRepository.findById(id)
+    public List<GalochkiPage> getAllPagesForCurrentOwner() {
+        return pageRepository.findByOwnerIdOrderById(getCurrentOwnerId());
+    }
+
+    public GalochkiPage getByIdForCurrentOwner(Long id) {
+        return pageRepository.findByIdAndOwnerId(id, getCurrentOwnerId())
                 .orElseThrow(() -> new IllegalArgumentException("Страница не найдена: " + id));
     }
 
@@ -27,17 +33,17 @@ public class GalochkiPageService {
         GalochkiPage page = new GalochkiPage();
         page.setTitle(title);
         page.setWeekStartDay(weekStartDay);
+        page.setOwnerId(getCurrentOwnerId());
 
         return pageRepository.save(page);
     }
 
-    public boolean hasPages() {
-        return pageRepository.count() > 0;
+    public boolean hasPagesForCurrentOwner() {
+        return pageRepository.existsByOwnerId(getCurrentOwnerId());
     }
 
-    public GalochkiPage getFirstPage() {
-        return pageRepository.findAll().stream()
-                .findFirst()
+    public GalochkiPage getFirstPageForCurrentOwner() {
+        return pageRepository.findFirstByOwnerIdOrderById(getCurrentOwnerId())
                 .orElseThrow(() -> new IllegalStateException("Страниц пока нет"));
     }
 }
