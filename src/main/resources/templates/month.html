@@ -102,6 +102,38 @@
 </h1>
 
 <div style="margin-bottom: 16px;">
+    <form method="get" action="/month" style="display: inline-block;">
+        <input type="hidden" name="year" th:value="${page.yearMonth().year}">
+        <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
+
+        <select name="pageId" onchange="this.form.submit()">
+            <option th:each="option : ${page.pageOptions()}"
+                    th:value="${option.id()}"
+                    th:selected="${option.id().equals(page.pageId())}"
+                    th:text="${option.title()}">
+                Основная
+            </option>
+        </select>
+    </form>
+</div>
+
+<form method="post" action="/pages" style="margin-bottom: 20px;">
+    <input type="text" name="title" placeholder="Новая страница" required>
+
+    <select name="weekStartDay" required>
+        <option value="MONDAY">Понедельник</option>
+        <option value="TUESDAY">Вторник</option>
+        <option value="WEDNESDAY">Среда</option>
+        <option value="THURSDAY">Четверг</option>
+        <option value="FRIDAY">Пятница</option>
+        <option value="SATURDAY">Суббота</option>
+        <option value="SUNDAY">Воскресенье</option>
+    </select>
+
+    <button type="submit">Создать страницу</button>
+</form>
+
+<div style="margin-bottom: 16px;">
     <a th:href="@{/month(pageId=${page.pageId()}, year=${page.previousMonth().year}, month=${page.previousMonth().monthValue})}">        ← Предыдущий месяц
     </a>
 

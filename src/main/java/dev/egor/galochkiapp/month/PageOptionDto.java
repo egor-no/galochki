@@ -1,4 +1,7 @@
 package dev.egor.galochkiapp.month;
 
-public class PageOptionDto {
+public record PageOptionDto(
+        Long id,
+        String title
+) {
 }

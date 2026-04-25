@@ -51,7 +51,10 @@ public class MonthPageService {
 
         List<DayDto> days = buildDays(yearMonth);
         List<ActivityRowDto> rows = buildRows(activities, days, galochkaMap);
-
+        List<PageOptionDto> pageOptions = pageService.getAllPages().stream()
+                .map(p -> new PageOptionDto(p.getId(), p.getTitle()))
+                .toList();
+        
         return new MonthPageDto(
                 page.getId(),
                 page.getTitle(),
@@ -59,7 +62,8 @@ public class MonthPageService {
                 yearMonth.minusMonths(1),
                 yearMonth.plusMonths(1),
                 days,
-                rows
+                rows,
+                pageOptions
         );
     }
 
