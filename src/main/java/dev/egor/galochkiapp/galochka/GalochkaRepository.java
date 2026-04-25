@@ -1,4 +1,14 @@
 package dev.egor.galochkiapp.galochka;
 
-public class GalochkaRepository {
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+public interface GalochkaRepository extends JpaRepository<Galochka, Long> {
+
+    Optional<Galochka> findByActivityIdAndDate(Long activityId, LocalDate date);
+
+    List<Galochka> findByDateBetween(LocalDate start, LocalDate end);
 }
