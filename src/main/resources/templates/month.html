@@ -35,8 +35,65 @@
         .empty {
             color: #777;
         }
+
+        .galochka-cell {
+            cursor: pointer;
+            min-width: 34px;
+            user-select: none;
+        }
+
+        .galochka-cell:hover {
+            background: #eaf3ff;
+        }
+
+        .galochka-cell.checked {
+            background: #d8f5d0;
+            font-weight: bold;
+        }
     </style>
 </head>
+
+<script>
+    document.addEventListener('click', function (event) {
+        const cell = event.target.closest('.galochka-cell');
+
+        if (!cell) {
+            return;
+        }
+
+        const activityId = cell.dataset.activityId;
+        const date = cell.dataset.date;
+
+        const params = new URLSearchParams();
+        params.append('activityId', activityId);
+        params.append('date', date);
+
+        fetch('/api/galochki/toggle', {
+            method: 'POST',
+            body: params
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Ошибка сохранения галочки');
+                }
+                return response.json();
+            })
+            .then(data => {
+                cell.textContent = data.value;
+
+                if (data.value !== '0') {
+                    cell.classList.add('checked');
+                } else {
+                    cell.classList.remove('checked');
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Не удалось сохранить галочку');
+            });
+    });
+</script>
+
 <body>
 
 <h1>
@@ -49,8 +106,8 @@
     <button type="submit">Добавить</button>
 </form>
 
-<p th:if="${#lists.isEmpty(page.activities())}" class="empty">
-    Пока дел нет. Добавь первое дело.
+<p th:if="${#lists.isEmpty(page.weeks())}">
+    Пока данных нет.
 </p>
 
 <div th:each="week, weekStat : ${page.weeks()}">
@@ -58,7 +115,7 @@
         Неделя <span th:text="${weekStat.index + 1}">1</span>
     </h2>
 
-    <table th:if="${!#lists.isEmpty(page.activities())}">
+    <table>
         <thead>
         <tr>
             <th>Дело</th>
@@ -70,11 +127,15 @@
         </thead>
 
         <tbody>
-        <tr th:each="activity : ${page.activities()}">
-            <td th:text="${activity.title}">Java</td>
+        <tr th:each="row : ${week.rows()}">
+            <td th:text="${row.title()}">Java</td>
 
-            <td th:each="day : ${week.days()}"
-                th:classappend="${!day.currentMonth()} ? 'other-month'">
+            <td th:each="cell, cellStat : ${row.cells()}"
+                class="galochka-cell"
+                th:classappend="|${!week.days()[cellStat.index].currentMonth() ? ' other-month' : ''}${cell.value() != '0' ? ' checked' : ''}|"
+                th:data-activity-id="${cell.activityId()}"
+                th:data-date="${cell.date()}"
+                th:text="${cell.value()}">
                 0
             </td>
         </tr>
