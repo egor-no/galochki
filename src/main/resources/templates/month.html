@@ -101,38 +101,50 @@
     <span th:text="${page.yearMonth()}">2026-04</span>
 </h1>
 
+<div style="margin-bottom: 16px;">
+    <a th:href="@{/month(pageId=${page.pageId()}, year=${page.previousMonth().year}, month=${page.previousMonth().monthValue})}">        ← Предыдущий месяц
+    </a>
+
+    <a th:href="@{/month}" style="margin: 0 16px;">
+        Текущий месяц
+    </a>
+
+    <a th:href="@{/month(pageId=${page.pageId()}, year=${page.nextMonth().year}, month=${page.nextMonth().monthValue})}">
+        Следующий месяц →
+    </a>
+</div>
+
 <form method="post" action="/activities">
+    <input type="hidden" name="pageId" th:value="${page.pageId()}">
+    <input type="hidden" name="year" th:value="${page.yearMonth().year}">
+    <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
+
     <input type="text" name="title" placeholder="Новое дело" required>
     <button type="submit">Добавить</button>
 </form>
 
-<p th:if="${#lists.isEmpty(page.weeks())}">
+<p th:if="${#lists.isEmpty(page.rows())}">
     Пока данных нет.
 </p>
 
-<div th:each="week, weekStat : ${page.weeks()}">
-    <h2>
-        Неделя <span th:text="${weekStat.index + 1}">1</span>
-    </h2>
-
-    <table>
+<div style="overflow-x: auto;">
+    <table th:if="${!#lists.isEmpty(page.rows())}">
         <thead>
         <tr>
             <th>Дело</th>
-            <th th:each="day : ${week.days()}"
-                th:classappend="${!day.currentMonth()} ? 'other-month'">
+            <th th:each="day : ${page.days()}">
                 <span th:text="${day.dayOfMonth()}">1</span>
             </th>
         </tr>
         </thead>
 
         <tbody>
-        <tr th:each="row : ${week.rows()}">
+        <tr th:each="row : ${page.rows()}">
             <td th:text="${row.title()}">Java</td>
 
-            <td th:each="cell, cellStat : ${row.cells()}"
+            <td th:each="cell : ${row.cells()}"
                 class="galochka-cell"
-                th:classappend="|${!week.days()[cellStat.index].currentMonth() ? ' other-month' : ''}${cell.value() != '0' ? ' checked' : ''}|"
+                th:classappend="${cell.value() != '0'} ? ' checked'"
                 th:data-activity-id="${cell.activityId()}"
                 th:data-date="${cell.date()}"
                 th:text="${cell.value()}">

@@ -4,7 +4,12 @@ import java.time.YearMonth;
 import java.util.List;
 
 public record MonthPageDto(
+        Long pageId,
+        String pageTitle,
         YearMonth yearMonth,
-        List<WeekDto> weeks
+        YearMonth previousMonth,
+        YearMonth nextMonth,
+        List<DayDto> days,
+        List<ActivityRowDto> rows
 ) {
 }

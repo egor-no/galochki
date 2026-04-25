@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Создать страницу</title>
+</head>
+<body>
+
+<h1>Создать первую страницу галочек</h1>
+
+<form method="post" action="/pages">
+    <div>
+        <label>
+            Название:
+            <input type="text" name="title" placeholder="Например: Привычки" required>
+        </label>
+    </div>
+
+    <div style="margin-top: 12px;">
+        <label>
+            Первый день недели:
+            <select name="weekStartDay" required>
+                <option th:each="day : ${weekDays}"
+                        th:value="${day}"
+                        th:text="${day}">
+                    MONDAY
+                </option>
+            </select>
+        </label>
+    </div>
+
+    <div style="margin-top: 12px;">
+        <button type="submit">Создать страницу</button>
+    </div>
+</form>
+
+</body>
+</html>

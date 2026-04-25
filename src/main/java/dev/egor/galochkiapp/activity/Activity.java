@@ -1,5 +1,6 @@
 package dev.egor.galochkiapp.activity;
 
+import dev.egor.galochkiapp.page.GalochkiPage;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -23,6 +24,10 @@ public class Activity {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "page_id", nullable = false)
+    private GalochkiPage page;
 
     public Long getId() {
         return id;
@@ -54,5 +59,13 @@ public class Activity {
 
     public void setSortOrder(Integer sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public GalochkiPage getPage() {
+        return page;
+    }
+
+    public void setPage(GalochkiPage page) {
+        this.page = page;
     }
 }

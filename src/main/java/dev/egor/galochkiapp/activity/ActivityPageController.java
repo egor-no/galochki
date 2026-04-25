@@ -14,8 +14,17 @@ public class ActivityPageController {
     }
 
     @PostMapping("/activities")
-    public String create(@RequestParam String title) {
-        activityService.create(title);
-        return "redirect:/month";
+    public String create(@RequestParam Long pageId,
+                         @RequestParam String title,
+                         @RequestParam(required = false) Integer year,
+                         @RequestParam(required = false) Integer month) {
+
+        activityService.create(pageId, title);
+
+        if (year != null && month != null) {
+            return "redirect:/month?pageId=" + pageId + "&year=" + year + "&month=" + month;
+        }
+
+        return "redirect:/month?pageId=" + pageId;
     }
 }

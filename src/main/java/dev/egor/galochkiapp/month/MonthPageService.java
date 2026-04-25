@@ -4,6 +4,8 @@ import dev.egor.galochkiapp.activity.Activity;
 import dev.egor.galochkiapp.activity.ActivityService;
 import dev.egor.galochkiapp.galochka.Galochka;
 import dev.egor.galochkiapp.galochka.GalochkaRepository;
+import dev.egor.galochkiapp.page.GalochkiPage;
+import dev.egor.galochkiapp.page.GalochkiPageService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -19,24 +21,27 @@ public class MonthPageService {
 
     private final ActivityService activityService;
     private final GalochkaRepository galochkaRepository;
+    private final GalochkiPageService pageService;
 
     public MonthPageService(ActivityService activityService,
-                            GalochkaRepository galochkaRepository) {
+                            GalochkaRepository galochkaRepository,
+                            GalochkiPageService pageService) {
         this.activityService = activityService;
         this.galochkaRepository = galochkaRepository;
+        this.pageService = pageService;
     }
 
-    public MonthPageDto buildCurrentMonth() {
-        return build(YearMonth.now());
-    }
+    public MonthPageDto build(Long pageId, YearMonth yearMonth) {
+        GalochkiPage page = pageService.getById(pageId);
 
-    public MonthPageDto build(YearMonth yearMonth) {
-        List<Activity> activities = activityService.getActiveActivities();
+        List<Activity> activities = activityService.getActiveActivitiesByPage(pageId);
 
+        DayOfWeek weekStartDay = page.getWeekStartDay();
         LocalDate start = yearMonth.atDay(1);
         LocalDate end = yearMonth.atEndOfMonth();
 
-        List<Galochka> galochki = galochkaRepository.findByDateBetween(start, end);
+        List<Galochka> galochki =
+                galochkaRepository.findByActivityPageIdAndDateBetween(pageId, start, end);
 
         Map<String, Galochka> galochkaMap = galochki.stream()
                 .collect(Collectors.toMap(
@@ -44,44 +49,34 @@ public class MonthPageService {
                         Function.identity()
                 ));
 
-        List<WeekDto> weeks = buildWeeks(yearMonth, activities, galochkaMap);
+        List<DayDto> days = buildDays(yearMonth);
+        List<ActivityRowDto> rows = buildRows(activities, days, galochkaMap);
 
-        return new MonthPageDto(yearMonth, weeks);
+        return new MonthPageDto(
+                page.getId(),
+                page.getTitle(),
+                yearMonth,
+                yearMonth.minusMonths(1),
+                yearMonth.plusMonths(1),
+                days,
+                rows
+        );
     }
 
-    private List<WeekDto> buildWeeks(YearMonth yearMonth,
-                                     List<Activity> activities,
-                                     Map<String, Galochka> galochkaMap) {
-        List<WeekDto> weeks = new ArrayList<>();
+    private List<DayDto> buildDays(YearMonth yearMonth) {
+        List<DayDto> days = new ArrayList<>();
 
-        LocalDate firstDay = yearMonth.atDay(1);
-        LocalDate lastDay = yearMonth.atEndOfMonth();
+        for (int day = 1; day <= yearMonth.lengthOfMonth(); day++) {
+            LocalDate date = yearMonth.atDay(day);
 
-        LocalDate cursor = firstDay;
-
-        while (cursor.getDayOfWeek() != DayOfWeek.MONDAY) {
-            cursor = cursor.minusDays(1);
+            days.add(new DayDto(
+                    date,
+                    day,
+                    true
+            ));
         }
 
-        while (!cursor.isAfter(lastDay)) {
-            List<DayDto> days = new ArrayList<>();
-
-            for (int i = 0; i < 7; i++) {
-                days.add(new DayDto(
-                        cursor,
-                        cursor.getDayOfMonth(),
-                        YearMonth.from(cursor).equals(yearMonth)
-                ));
-
-                cursor = cursor.plusDays(1);
-            }
-
-            List<ActivityRowDto> rows = buildRows(activities, days, galochkaMap);
-
-            weeks.add(new WeekDto(days, rows));
-        }
-
-        return weeks;
+        return days;
     }
 
     private List<ActivityRowDto> buildRows(List<Activity> activities,
