@@ -18,13 +18,14 @@ public class ActivityService {
         this.pageService = pageService;
     }
 
-    public List<Activity> getActiveActivitiesByPage(Long pageId) {
+    public List<Activity> getActiveActivitiesByPageForCurrentOwner(Long pageId) {
+        pageService.getByIdForCurrentOwner(pageId);
         return activityRepository.findByPageIdAndActiveTrueOrderById(pageId);
     }
 
     public Activity create(Long pageId, String title) {
         GalochkiPage page = pageService.getByIdForCurrentOwner(pageId);
-        
+
         Activity activity = new Activity();
         activity.setPage(page);
         activity.setTitle(title);

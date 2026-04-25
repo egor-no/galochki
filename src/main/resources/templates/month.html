@@ -50,6 +50,74 @@
             background: #d8f5d0;
             font-weight: bold;
         }
+
+        .table-wrap {
+            overflow-x: auto;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            background: white;
+        }
+
+        .galochki-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 0;
+            min-width: max-content;
+        }
+
+        .galochki-table th,
+        .galochki-table td {
+            border: 0;
+            border-right: 1px solid #e5e5e5;
+            border-bottom: 1px solid #e5e5e5;
+            padding: 8px 10px;
+            text-align: center;
+        }
+
+        .activity-head,
+        .activity-name {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background: #fff;
+            min-width: 180px;
+            text-align: left !important;
+            font-weight: 600;
+        }
+
+        .activity-head {
+            z-index: 3;
+            background: #f6f6f6;
+        }
+
+        .week-separator {
+            min-width: 14px;
+            width: 14px;
+            background: #f3f3f3;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .galochka-cell {
+            cursor: pointer;
+            min-width: 34px;
+            user-select: none;
+            transition: background 0.12s ease;
+        }
+
+        .galochka-cell:hover {
+            background: #eaf3ff;
+        }
+
+        .galochka-cell.checked {
+            background: #d8f5d0;
+            font-weight: bold;
+        }
+
+        .other-month {
+            color: #aaa;
+            background: #fafafa;
+        }
     </style>
 </head>
 
@@ -159,29 +227,39 @@
     Пока данных нет.
 </p>
 
-<div style="overflow-x: auto;">
-    <table th:if="${!#lists.isEmpty(page.rows())}">
+<div class="table-wrap">
+    <table th:if="${!#lists.isEmpty(page.rows())}" class="galochki-table">
         <thead>
         <tr>
-            <th>Дело</th>
-            <th th:each="day : ${page.days()}">
-                <span th:text="${day.dayOfMonth()}">1</span>
-            </th>
+            <th class="activity-head">Дело</th>
+
+            <th:block th:each="week, weekStat : ${page.weeks()}">
+                <th th:each="day : ${week.days()}"
+                    th:classappend="${!day.currentMonth()} ? ' other-month'">
+                    <span th:text="${day.dayOfMonth()}">1</span>
+                </th>
+
+                <th th:if="${!weekStat.last}" class="week-separator"></th>
+            </th:block>
         </tr>
         </thead>
 
         <tbody>
         <tr th:each="row : ${page.rows()}">
-            <td th:text="${row.title()}">Java</td>
+            <td class="activity-name" th:text="${row.title()}">Java</td>
 
-            <td th:each="cell : ${row.cells()}"
-                class="galochka-cell"
-                th:classappend="${cell.value() != '0'} ? ' checked'"
-                th:data-activity-id="${cell.activityId()}"
-                th:data-date="${cell.date()}"
-                th:text="${cell.value()}">
-                0
-            </td>
+            <th:block th:each="weekCells, weekStat : ${row.weeks()}">
+                <td th:each="cell, cellStat : ${weekCells.cells()}"
+                    class="galochka-cell"
+                    th:classappend="|${!page.weeks()[weekStat.index].days()[cellStat.index].currentMonth() ? ' other-month' : ''}${cell.value() != '0' ? ' checked' : ''}|"
+                    th:data-activity-id="${cell.activityId()}"
+                    th:data-date="${cell.date()}"
+                    th:text="${cell.value()}">
+                    0
+                </td>
+
+                <td th:if="${!weekStat.last}" class="week-separator"></td>
+            </th:block>
         </tr>
         </tbody>
     </table>

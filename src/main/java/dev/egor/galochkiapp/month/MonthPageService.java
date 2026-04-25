@@ -34,11 +34,14 @@ public class MonthPageService {
     public MonthPageDto build(Long pageId, YearMonth yearMonth) {
         GalochkiPage page = pageService.getByIdForCurrentOwner(pageId);
 
-        List<Activity> activities = activityService.getActiveActivitiesByPage(pageId);
+        List<Activity> activities = activityService.getActiveActivitiesByPageForCurrentOwner(pageId);
 
         DayOfWeek weekStartDay = page.getWeekStartDay();
-        LocalDate start = yearMonth.atDay(1);
-        LocalDate end = yearMonth.atEndOfMonth();
+
+        List<WeekDto> weeks = buildWeeks(yearMonth, weekStartDay);
+
+        LocalDate start = weeks.get(0).startDate();
+        LocalDate end = weeks.get(weeks.size() - 1).endDate();
 
         List<Galochka> galochki =
                 galochkaRepository.findByActivityPageIdAndDateBetween(pageId, start, end);
@@ -49,8 +52,8 @@ public class MonthPageService {
                         Function.identity()
                 ));
 
-        List<DayDto> days = buildDays(yearMonth);
-        List<ActivityRowDto> rows = buildRows(activities, days, galochkaMap);
+        List<ActivityRowDto> rows = buildRows(activities, weeks, galochkaMap);
+
         List<PageOptionDto> pageOptions = pageService.getAllPagesForCurrentOwner().stream()
                 .map(p -> new PageOptionDto(p.getId(), p.getTitle()))
                 .toList();
@@ -61,10 +64,53 @@ public class MonthPageService {
                 yearMonth,
                 yearMonth.minusMonths(1),
                 yearMonth.plusMonths(1),
-                days,
+                weeks,
                 rows,
                 pageOptions
         );
+    }
+
+    private List<WeekDto> buildWeeks(YearMonth yearMonth, DayOfWeek weekStartDay) {
+        List<WeekDto> weeks = new ArrayList<>();
+
+        LocalDate firstDayOfMonth = yearMonth.atDay(1);
+        LocalDate lastDayOfMonth = yearMonth.atEndOfMonth();
+
+        LocalDate cursor = moveBackToWeekStart(firstDayOfMonth, weekStartDay);
+
+        while (!cursor.isAfter(lastDayOfMonth)) {
+            List<DayDto> days = new ArrayList<>();
+
+            LocalDate weekStart = cursor;
+
+            for (int i = 0; i < 7; i++) {
+                days.add(new DayDto(
+                        cursor,
+                        cursor.getDayOfMonth(),
+                        YearMonth.from(cursor).equals(yearMonth)
+                ));
+
+                cursor = cursor.plusDays(1);
+            }
+
+            weeks.add(new WeekDto(
+                    weekStart,
+                    cursor.minusDays(1),
+                    days
+            ));
+        }
+
+        return weeks;
+    }
+
+    private LocalDate moveBackToWeekStart(LocalDate date, DayOfWeek weekStartDay) {
+        LocalDate result = date;
+
+        while (result.getDayOfWeek() != weekStartDay) {
+            result = result.minusDays(1);
+        }
+
+        return result;
     }
 
     private List<DayDto> buildDays(YearMonth yearMonth) {
@@ -84,31 +130,37 @@ public class MonthPageService {
     }
 
     private List<ActivityRowDto> buildRows(List<Activity> activities,
-                                           List<DayDto> days,
+                                           List<WeekDto> weeks,
                                            Map<String, Galochka> galochkaMap) {
         List<ActivityRowDto> rows = new ArrayList<>();
 
         for (Activity activity : activities) {
-            List<GalochkaCellDto> cells = new ArrayList<>();
+            List<ActivityWeekCellsDto> activityWeeks = new ArrayList<>();
 
-            for (DayDto day : days) {
-                Galochka galochka = galochkaMap.get(key(activity.getId(), day.date()));
+            for (WeekDto week : weeks) {
+                List<GalochkaCellDto> cells = new ArrayList<>();
 
-                BigDecimal value = galochka == null
-                        ? BigDecimal.ZERO
-                        : galochka.getValue();
+                for (DayDto day : week.days()) {
+                    Galochka galochka = galochkaMap.get(key(activity.getId(), day.date()));
 
-                cells.add(new GalochkaCellDto(
-                        activity.getId(),
-                        day.date().toString(),
-                        value.stripTrailingZeros().toPlainString()
-                ));
+                    BigDecimal value = galochka == null
+                            ? BigDecimal.ZERO
+                            : galochka.getValue();
+
+                    cells.add(new GalochkaCellDto(
+                            activity.getId(),
+                            day.date().toString(),
+                            value.stripTrailingZeros().toPlainString()
+                    ));
+                }
+
+                activityWeeks.add(new ActivityWeekCellsDto(cells));
             }
 
             rows.add(new ActivityRowDto(
                     activity.getId(),
                     activity.getTitle(),
-                    cells
+                    activityWeeks
             ));
         }
 

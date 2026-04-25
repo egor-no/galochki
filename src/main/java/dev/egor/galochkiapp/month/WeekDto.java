@@ -1,9 +1,11 @@
 package dev.egor.galochkiapp.month;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public record WeekDto(
-        List<DayDto> days,
-        List<ActivityRowDto> rows
+        LocalDate startDate,
+        LocalDate endDate,
+        List<DayDto> days
 ) {
 }

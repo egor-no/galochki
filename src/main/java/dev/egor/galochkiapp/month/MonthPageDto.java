@@ -9,7 +9,7 @@ public record MonthPageDto(
         YearMonth yearMonth,
         YearMonth previousMonth,
         YearMonth nextMonth,
-        List<DayDto> days,
+        List<WeekDto> weeks,
         List<ActivityRowDto> rows,
         List<PageOptionDto> pageOptions
 ) {

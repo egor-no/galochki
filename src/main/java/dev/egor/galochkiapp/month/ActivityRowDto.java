@@ -5,6 +5,6 @@ import java.util.List;
 public record ActivityRowDto(
         Long activityId,
         String title,
-        List<GalochkaCellDto> cells
+        List<ActivityWeekCellsDto> weeks
 ) {
 }
