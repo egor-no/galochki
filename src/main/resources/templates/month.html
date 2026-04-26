@@ -225,6 +225,123 @@
             background: transparent !important;
         }
 
+        .edit-toggle {
+            border: none;
+            font-size: 34px;
+            padding: 0 8px;
+            vertical-align: middle;
+        }
+
+        .edit-panel {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        body.edit-mode .edit-panel {
+            display: block;
+        }
+
+        .edit-col {
+            display: none;
+            width: 34px !important;
+            min-width: 34px !important;
+            max-width: 34px !important;
+        }
+
+        .edit-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .edit-inline-form {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+        }
+
+        .view-title {
+            display: block;
+        }
+
+        .edit-title-form {
+            display: none;
+            gap: 6px;
+            align-items: center;
+        }
+
+        body.edit-mode .view-title {
+            display: none;
+        }
+
+        body.edit-mode .edit-title-form {
+            display: flex;
+        }
+
+        .edit-title-form input {
+            width: 170px;
+            height: 34px;
+            font-size: 24px;
+        }
+
+        .week-start-disabled {
+            position: relative;
+            opacity: 0.65;
+            pointer-events: none;
+        }
+
+        .week-start-disabled select {
+            background:
+                    repeating-linear-gradient(
+                            -45deg,
+                            rgba(16, 47, 117, 0.08),
+                            rgba(16, 47, 117, 0.08) 4px,
+                            transparent 4px,
+                            transparent 8px
+                    );
+        }
+
+
+        body.edit-mode .edit-col {
+            display: table-cell;
+        }
+
+        .activity-edit-line {
+            display: none;
+            align-items: center;
+            gap: 4px;
+        }
+
+        body.edit-mode .activity-edit-line {
+            display: flex;
+        }
+
+        .edit-title-form {
+            display: block;
+            margin: 0;
+        }
+
+        .edit-title-form input {
+            width: 190px;
+            height: 28px;
+            font-size: 22px;
+            padding: 0 6px;
+        }
+
+        .erase-btn {
+            border: none !important;
+            background: transparent !important;
+            padding: 0 !important;
+            margin: 0;
+            width: 24px;
+            height: 28px;
+            line-height: 28px;
+            font-size: 22px;
+        }
+
         .other-month {
             color: rgba(16, 47, 117, 0.35) !important;
             background: rgba(255, 255, 255, 0.12) !important;
@@ -300,6 +417,63 @@
                 alert('Не удалось сохранить галочку');
             });
     });
+
+    function toggleEditMode() {
+        document.body.classList.toggle('edit-mode');
+    }
+
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('.edit-title-form');
+
+        if (!form) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const input = form.querySelector('input[name="title"]');
+        const activityId = form.querySelector('input[name="activityId"]').value;
+
+        const params = new URLSearchParams();
+        params.append('activityId', activityId);
+        params.append('title', input.value);
+
+        fetch('/activities/update', {
+            method: 'POST',
+            body: params
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Ошибка обновления');
+                }
+
+                const cell = form.closest('.activity-name');
+                const viewTitle = cell.querySelector('.view-title');
+
+                if (viewTitle) {
+                    viewTitle.textContent = input.value;
+                    input.dataset.original = input.value;
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Не удалось обновить');
+            });
+    });
+
+    document.addEventListener('focusout', function (event) {
+        const input = event.target.closest('.edit-title-form input[name="title"]');
+
+        if (!input) {
+            return;
+        }
+
+        if (input.value === input.dataset.original) {
+            return;
+        }
+
+        input.form.requestSubmit();
+    });
 </script>
 
 <body>
@@ -307,6 +481,10 @@
 <h1>
     Галочки —
     <span th:text="${page.yearMonth()}">2026-04</span>
+
+    <button type="button" class="edit-toggle" onclick="toggleEditMode()" title="Редактировать">
+        ✎
+    </button>
 </h1>
 
 <div style="margin-bottom: 16px;">
@@ -325,21 +503,53 @@
     </form>
 </div>
 
-<form method="post" action="/pages" style="margin-bottom: 20px;">
-    <input type="text" name="title" placeholder="Новая страница" required>
+<div class="edit-panel">
+    <div class="edit-row">
+        <form method="post" action="/pages/update" class="edit-inline-form">
+            <input type="hidden" name="pageId" th:value="${page.pageId()}">
+            <input type="hidden" name="year" th:value="${page.yearMonth().year}">
+            <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
 
-    <select name="weekStartDay" required>
-        <option value="MONDAY">Понедельник</option>
-        <option value="TUESDAY">Вторник</option>
-        <option value="WEDNESDAY">Среда</option>
-        <option value="THURSDAY">Четверг</option>
-        <option value="FRIDAY">Пятница</option>
-        <option value="SATURDAY">Суббота</option>
-        <option value="SUNDAY">Воскресенье</option>
-    </select>
+            <input type="text" name="title" th:value="${page.pageTitle()}" required>
 
-    <button type="submit">Создать страницу</button>
-</form>
+            <span class="week-start-disabled" title="Пока нельзя менять первый день недели">
+                <select disabled>
+                    <option value="MONDAY">Понедельник</option>
+                    <option value="TUESDAY">Вторник</option>
+                    <option value="WEDNESDAY">Среда</option>
+                    <option value="THURSDAY">Четверг</option>
+                    <option value="FRIDAY">Пятница</option>
+                    <option value="SATURDAY">Суббота</option>
+                    <option value="SUNDAY">Воскресенье</option>
+                </select>
+            </span>
+
+            <button type="submit">Сохранить страницу</button>
+        </form>
+
+        <form method="post" action="/pages/delete" class="edit-inline-form"
+              onsubmit="return confirm('Удалить страницу полностью? Все дела и галочки тоже удалятся.');">
+            <input type="hidden" name="pageId" th:value="${page.pageId()}">
+            <button type="submit">Стереть страницу</button>
+        </form>
+    </div>
+
+    <form method="post" action="/pages" class="edit-inline-form edit-row">
+        <input type="text" name="title" placeholder="Новая страница" required>
+
+        <select name="weekStartDay" required>
+            <option value="MONDAY">Понедельник</option>
+            <option value="TUESDAY">Вторник</option>
+            <option value="WEDNESDAY">Среда</option>
+            <option value="THURSDAY">Четверг</option>
+            <option value="FRIDAY">Пятница</option>
+            <option value="SATURDAY">Суббота</option>
+            <option value="SUNDAY">Воскресенье</option>
+        </select>
+
+        <button type="submit">Создать страницу</button>
+    </form>
+</div>
 
 <div style="margin-bottom: 16px;">
     <a th:href="@{/month(pageId=${page.pageId()}, year=${page.previousMonth().year}, month=${page.previousMonth().monthValue})}">        ← Предыдущий месяц
@@ -354,14 +564,16 @@
     </a>
 </div>
 
-<form method="post" action="/activities">
-    <input type="hidden" name="pageId" th:value="${page.pageId()}">
-    <input type="hidden" name="year" th:value="${page.yearMonth().year}">
-    <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
+<div id="editPanel" class="edit-panel">
+    <form method="post" action="/activities">
+        <input type="hidden" name="pageId" th:value="${page.pageId()}">
+        <input type="hidden" name="year" th:value="${page.yearMonth().year}">
+        <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
 
-    <input type="text" name="title" placeholder="Новое дело" required>
-    <button type="submit">Добавить</button>
-</form>
+        <input type="text" name="title" placeholder="Новое дело" required>
+        <button type="submit">Добавить</button>
+    </form>
+</div>
 
 <p th:if="${#lists.isEmpty(page.rows())}">
     Пока данных нет.
@@ -386,7 +598,31 @@
 
         <tbody>
         <tr th:each="row : ${page.rows()}">
-            <td class="activity-name" th:text="${row.title()}">Java</td>
+            <td class="activity-name">
+                <span class="view-title" th:text="${row.title()}"></span>
+
+                <div class="activity-edit-line">
+                    <form class="edit-title-form">
+                        <input type="hidden" name="activityId" th:value="${row.activityId()}">
+
+                        <input type="text"
+                               name="title"
+                               th:value="${row.title()}"
+                               th:attr="data-original=${row.title()}"
+                               required>
+                    </form>
+
+                    <form method="post" action="/activities/delete"
+                          onsubmit="return confirm('Удалить дело полностью? Галочки тоже удалятся.');">
+                        <input type="hidden" name="activityId" th:value="${row.activityId()}">
+                        <input type="hidden" name="pageId" th:value="${page.pageId()}">
+                        <input type="hidden" name="year" th:value="${page.yearMonth().year}">
+                        <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
+
+                        <button type="submit" class="erase-btn" title="Стереть дело">⌫</button>
+                    </form>
+                </div>
+            </td>
             <td class="week-separator"></td>
             <th:block th:each="weekCells, weekStat : ${row.weeks()}">
                 <td th:each="cell, cellStat : ${weekCells.cells()}"

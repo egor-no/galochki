@@ -11,4 +11,8 @@ public interface GalochkaRepository extends JpaRepository<Galochka, Long> {
     Optional<Galochka> findByActivityIdAndDate(Long activityId, LocalDate date);
 
     List<Galochka> findByActivityPageIdAndDateBetween(Long pageId, LocalDate start, LocalDate end);
+
+    void deleteByActivityId(Long activityId);
+
+    void deleteByActivityPageId(Long pageId);
 }
