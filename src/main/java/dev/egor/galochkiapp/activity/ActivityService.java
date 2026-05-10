@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ActivityService {
@@ -25,9 +27,10 @@ public class ActivityService {
 
     public List<Activity> getActiveActivitiesByPageForCurrentOwner(Long pageId) {
         pageService.getByIdForCurrentOwner(pageId);
-        return activityRepository.findByPageIdAndActiveTrueOrderById(pageId);
+        return activityRepository.findByPageIdAndActiveTrueOrderBySortOrderAscIdAsc(pageId);
     }
 
+    @Transactional
     public Activity create(Long pageId, String title) {
         GalochkiPage page = pageService.getByIdForCurrentOwner(pageId);
 
@@ -35,7 +38,7 @@ public class ActivityService {
         activity.setPage(page);
         activity.setTitle(title);
         activity.setActive(true);
-        activity.setSortOrder(0);
+        activity.setSortOrder(activityRepository.countByPageIdAndActiveTrue(pageId));
 
         return activityRepository.save(activity);
     }
@@ -48,6 +51,26 @@ public class ActivityService {
         pageService.getByIdForCurrentOwner(activity.getPage().getId());
 
         activity.setTitle(title);
+    }
+
+    @Transactional
+    public void reorderForCurrentOwner(Long pageId, List<Long> activityIds) {
+        pageService.getByIdForCurrentOwner(pageId);
+
+        List<Activity> activities = activityRepository.findByPageIdAndActiveTrueOrderBySortOrderAscIdAsc(pageId);
+
+        Map<Long, Activity> activityMap = activities.stream()
+                .collect(Collectors.toMap(Activity::getId, activity -> activity));
+
+        for (int i = 0; i < activityIds.size(); i++) {
+            Activity activity = activityMap.get(activityIds.get(i));
+
+            if (activity == null) {
+                throw new IllegalArgumentException("Дело не найдено на этой странице: " + activityIds.get(i));
+            }
+
+            activity.setSortOrder(i);
+        }
     }
 
     @Transactional

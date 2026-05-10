@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.List;
+
 @Controller
 public class ActivityPageController {
 
@@ -36,6 +38,15 @@ public class ActivityPageController {
 
         activityService.renameForCurrentOwner(activityId, title);
 
+        return "OK";
+    }
+
+    @PostMapping("/activities/reorder")
+    @ResponseBody
+    public String reorder(@RequestParam Long pageId,
+                          @RequestParam List<Long> activityIds) {
+
+        activityService.reorderForCurrentOwner(pageId, activityIds);
         return "OK";
     }
 

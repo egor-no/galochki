@@ -6,5 +6,7 @@ import java.util.List;
 
 public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
-    List<Activity> findByPageIdAndActiveTrueOrderById(Long pageId);
+    List<Activity> findByPageIdAndActiveTrueOrderBySortOrderAscIdAsc(Long pageId);
+
+    int countByPageIdAndActiveTrue(Long pageId);
 }

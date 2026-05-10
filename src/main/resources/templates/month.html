@@ -375,6 +375,14 @@
                 max-width: 220px !important;
             }
         }
+
+        body.edit-mode .activity-name {
+            cursor: grab;
+        }
+
+        body.edit-mode tr.dragging .activity-name {
+            cursor: grabbing;
+        }
     </style>
 </head>
 
@@ -420,6 +428,12 @@
 
     function toggleEditMode() {
         document.body.classList.toggle('edit-mode');
+
+        const tbody = document.getElementById('activityRows');
+
+        if (tbody) {
+            updateDraggableRows(tbody);
+        }
     }
 
     document.addEventListener('submit', function (event) {
@@ -474,6 +488,114 @@
 
         input.form.requestSubmit();
     });
+
+    let draggedRow = null;
+    let orderChanged = false;
+
+    function updateDraggableRows(tbody) {
+        const editable = document.body.classList.contains('edit-mode');
+
+        tbody.querySelectorAll('.activity-name').forEach(cell => {
+            cell.draggable = editable;
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const tbody = document.getElementById('activityRows');
+
+        if (!tbody) {
+            return;
+        }
+
+        updateDraggableRows(tbody);
+
+        tbody.addEventListener('dragstart', function (event) {
+            if (!document.body.classList.contains('edit-mode')) {
+                event.preventDefault();
+                return;
+            }
+
+            const handle = event.target.closest('.activity-name');
+
+            if (!handle) {
+                event.preventDefault();
+                return;
+            }
+
+            if (event.target.closest('input, button, form')) {
+                event.preventDefault();
+                return;
+            }
+
+            draggedRow = handle.closest('tr');
+            orderChanged = false;
+
+            if (!draggedRow) {
+                event.preventDefault();
+                return;
+            }
+
+            draggedRow.classList.add('dragging');
+        });
+
+        tbody.addEventListener('dragend', function () {
+            if (draggedRow) {
+                draggedRow.classList.remove('dragging');
+            }
+
+            draggedRow = null;
+
+            if (orderChanged) {
+                saveActivityOrder(tbody);
+            }
+        });
+
+        tbody.addEventListener('dragover', function (event) {
+            event.preventDefault();
+
+            const targetRow = event.target.closest('tr');
+
+            if (!targetRow || targetRow === draggedRow) {
+                return;
+            }
+
+            const rect = targetRow.getBoundingClientRect();
+            const middle = rect.top + rect.height / 2;
+
+            orderChanged = true;
+            if (event.clientY < middle) {
+                tbody.insertBefore(draggedRow, targetRow);
+            } else {
+                tbody.insertBefore(draggedRow, targetRow.nextSibling);
+            }
+        });
+    });
+
+    function saveActivityOrder(tbody) {
+        const pageId = tbody.dataset.pageId;
+
+        const activityIds = Array.from(tbody.querySelectorAll('tr'))
+        .map(row => row.dataset.activityId);
+
+        const params = new URLSearchParams();
+        params.append('pageId', pageId);
+
+        activityIds.forEach(id => {
+            params.append('activityIds', id);
+        });
+
+        fetch('/activities/reorder', {
+            method: 'POST',
+            body: params
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('Ошибка сохранения порядка');
+            }
+         }).catch(error => {
+            console.error(error);
+            alert('Не удалось сохранить порядок строк');
+        });
+    }
 </script>
 
 <body>
@@ -596,8 +718,8 @@
         </tr>
         </thead>
 
-        <tbody>
-        <tr th:each="row : ${page.rows()}">
+        <tbody id="activityRows" th:data-page-id="${page.pageId()}">
+        <tr th:each="row : ${page.rows()}" th:data-activity-id="${row.activityId()}">
             <td class="activity-name">
                 <span class="view-title" th:text="${row.title()}"></span>
 
