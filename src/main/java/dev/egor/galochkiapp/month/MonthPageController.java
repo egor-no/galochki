@@ -26,6 +26,7 @@ public class MonthPageController {
     public String month(@RequestParam(required = false) Long pageId,
                         @RequestParam(required = false) Integer year,
                         @RequestParam(required = false) Integer month,
+                        @RequestParam(required = false) Boolean edit,
                         Model model) {
 
         if (!pageService.hasPagesForCurrentOwner()) {
@@ -41,6 +42,7 @@ public class MonthPageController {
                 ? YearMonth.of(year, month)
                 : YearMonth.now();
 
+        model.addAttribute("edit", Boolean.TRUE.equals(edit));
         model.addAttribute("page", monthPageService.build(selectedPage.getId(), yearMonth));
         return "month";
     }

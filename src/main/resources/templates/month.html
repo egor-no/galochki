@@ -383,6 +383,95 @@
         body.edit-mode tr.dragging .activity-name {
             cursor: grabbing;
         }
+
+        .group-row .group-name {
+            font-size: 30px;
+            font-weight: 700;
+        }
+
+        .group-view-title,
+        .group-edit-placeholder {
+            text-decoration: underline;
+            text-underline-offset: 5px;
+            display: inline-block;
+        }
+
+        .group-title-form input {
+            width: 190px;
+            height: 28px;
+            font-size: 22px;
+            padding: 0 6px;
+        }
+
+        .group-row.group-editing .group-view-title {
+            display: none;
+        }
+
+        .group-title-form {
+            display: none;
+            margin: 0;
+        }
+
+        .group-row.group-editing .group-view-title,
+        .group-row.group-editing .group-edit-placeholder {
+            display: none !important;
+        }
+
+        .group-row.group-editing .group-title-form {
+            display: inline-block !important;
+        }
+
+        .group-title-form input {
+            width: 220px;
+            height: 34px;
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .group-row.group-editing .group-title-form {
+            display: inline-block;
+        }
+
+        body.edit-mode .group-row .group-name {
+            cursor: grab;
+        }
+
+        body.edit-mode tr.activity-row .activity-name {
+            cursor: grab;
+        }
+
+        tr.dragging .activity-name {
+            opacity: 0.45;
+        }
+
+        .group-edit-placeholder {
+            display: none;
+            opacity: 0.55;
+        }
+
+        body.edit-mode .group-row .group-view-title:empty + .group-edit-placeholder {
+            display: inline;
+        }
+
+        .group-delete-btn {
+            display: none !important;
+        }
+
+        body.edit-mode .group-row:hover .group-delete-btn {
+            display: inline-block !important;
+        }
+
+        body.edit-mode .group-row:hover .group-delete-btn {
+            display: inline-block;
+        }
+
+        .activity-delete-btn {
+            display: none !important;
+        }
+
+        body.edit-mode tr.activity-row:hover .activity-delete-btn {
+            display: inline-block !important;
+        }
     </style>
 </head>
 
@@ -489,14 +578,249 @@
         input.form.requestSubmit();
     });
 
-    let draggedRow = null;
+    document.addEventListener('dblclick', function (event) {
+        if (!document.body.classList.contains('edit-mode')) {
+            return;
+        }
+
+        const groupName = event.target.closest('.group-name');
+
+        if (!groupName) {
+            return;
+        }
+
+        const groupRow = groupName.closest('.group-row');
+
+        if (!groupRow || !groupRow.dataset.groupId) {
+            return;
+        }
+
+        groupRow.classList.add('group-editing');
+
+        const input = groupRow.querySelector('.group-title-form input[name="title"]');
+
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    });
+
+    function refreshGroupSelectOptions() {
+        const select = document.querySelector('select[name="groupId"]');
+
+        if (!select) {
+            return;
+        }
+
+        select.querySelectorAll('option[data-group-id]').forEach(option => option.remove());
+
+        let index = 1;
+
+        document.querySelectorAll('.group-row').forEach(groupRow => {
+            const groupId = groupRow.dataset.groupId;
+
+            if (!groupId) {
+                return;
+            }
+
+            const title = groupRow.querySelector('.group-view-title').textContent.trim();
+            const option = document.createElement('option');
+
+            option.value = groupId;
+            option.dataset.groupId = groupId;
+            option.textContent = title || 'Группа ' + index;
+
+            select.appendChild(option);
+            index++;
+        });
+    }
+
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('.group-title-form');
+
+        if (!form) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const groupRow = form.closest('.group-row');
+        const input = form.querySelector('input[name="title"]');
+        const groupId = form.querySelector('input[name="groupId"]').value;
+
+        const params = new URLSearchParams();
+        params.append('groupId', groupId);
+        params.append('title', input.value);
+
+        fetch('/activity-groups/update', {
+            method: 'POST',
+            body: params
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('Ошибка обновления группы');
+            }
+
+            const viewTitle = groupRow.querySelector('.group-view-title');
+
+            if (viewTitle) {
+                viewTitle.textContent = input.value;
+            }
+
+            input.dataset.original = input.value;
+            groupRow.classList.remove('group-editing');
+            refreshGroupSelectOptions();
+        }).catch(error => {
+            console.error(error);
+            alert('Не удалось обновить группу');
+        });
+    });
+
+    document.addEventListener('focusout', function (event) {
+        const input = event.target.closest('.group-title-form input[name="title"]');
+
+        if (!input) {
+            return;
+        }
+
+        const groupRow = input.closest('.group-row');
+
+        if (input.value === input.dataset.original) {
+            groupRow.classList.remove('group-editing');
+            return;
+        }
+
+        input.form.requestSubmit();
+    });
+
+    let draggedRows = [];
+    let draggedType = null;
     let orderChanged = false;
 
     function updateDraggableRows(tbody) {
         const editable = document.body.classList.contains('edit-mode');
 
-        tbody.querySelectorAll('.activity-name').forEach(cell => {
+        tbody.querySelectorAll('.activity-row .activity-name').forEach(cell => {
             cell.draggable = editable;
+        });
+
+        tbody.querySelectorAll('.group-row .group-name').forEach(cell => {
+            const groupRow = cell.closest('.group-row');
+
+            cell.draggable =
+                editable &&
+                groupRow &&
+                !!groupRow.dataset.groupId;
+        });
+    }
+
+    function getGroupBlock(groupRow) {
+        const rows = [groupRow];
+        let next = groupRow.nextElementSibling;
+
+        while (next && !next.classList.contains('group-row')) {
+            rows.push(next);
+            next = next.nextElementSibling;
+        }
+
+        return rows;
+    }
+
+    function insertRowsBefore(tbody, rows, targetRow) {
+        rows.forEach(row => tbody.insertBefore(row, targetRow));
+    }
+
+    function insertRowsAfter(tbody, rows, targetRow) {
+        const after = targetRow.nextElementSibling;
+
+        rows.forEach(row => tbody.insertBefore(row, after));
+    }
+
+    function findGroupRowForActivity(activityRow) {
+        let prev = activityRow.previousElementSibling;
+
+        while (prev) {
+            if (prev.classList.contains('group-row')) {
+                return prev;
+            }
+
+            prev = prev.previousElementSibling;
+        }
+
+        return null;
+    }
+
+    function saveGroupOrder(tbody) {
+        const pageId = tbody.dataset.pageId;
+
+        const params = new URLSearchParams();
+        params.append('pageId', pageId);
+
+        tbody.querySelectorAll('.group-row[data-group-id]').forEach(row => {
+            const groupId = row.dataset.groupId;
+
+            if (groupId) {
+                params.append('groupIds', groupId);
+            }
+        });
+
+        fetch('/activity-groups/reorder', {
+            method: 'POST',
+            body: params
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('Ошибка сохранения порядка групп');
+            }
+        }).catch(error => {
+            console.error(error);
+            alert('Не удалось сохранить порядок групп');
+        });
+    }
+
+    function collectActivityGroups(tbody) {
+        const result = [];
+
+        tbody.querySelectorAll('.group-row').forEach(groupRow => {
+            const rawGroupId = groupRow.dataset.groupId;
+            const groupId = rawGroupId ? Number(rawGroupId) : null;
+
+            const activityIds = [];
+            let next = groupRow.nextElementSibling;
+
+            while (next && !next.classList.contains('group-row')) {
+                if (next.classList.contains('activity-row')) {
+                    activityIds.push(Number(next.dataset.activityId));
+                    next.dataset.groupId = rawGroupId || '';
+                }
+
+                next = next.nextElementSibling;
+            }
+
+            result.push({
+                groupId: groupId,
+                activityIds: activityIds
+            });
+        });
+
+        return result;
+    }
+
+    function saveActivityOrder(tbody) {
+        const pageId = tbody.dataset.pageId;
+        const payload = collectActivityGroups(tbody);
+
+        fetch('/activities/reorder?pageId=' + encodeURIComponent(pageId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('Ошибка сохранения порядка дел');
+            }
+        }).catch(error => {
+            console.error(error);
+            alert('Не удалось сохранить порядок дел');
         });
     }
 
@@ -515,91 +839,138 @@
                 return;
             }
 
-            const handle = event.target.closest('.activity-name');
-
-            if (!handle) {
-                event.preventDefault();
-                return;
-            }
-
             if (event.target.closest('input, button, form')) {
                 event.preventDefault();
                 return;
             }
 
-            draggedRow = handle.closest('tr');
-            orderChanged = false;
+            const groupHandle = event.target.closest('.group-row .group-name');
+            const activityHandle = event.target.closest('.activity-row .activity-name');
 
-            if (!draggedRow) {
+            if (groupHandle) {
+                const groupRow = groupHandle.closest('.group-row');
+
+                if (!groupRow.dataset.groupId) {
+                    event.preventDefault();
+                    return;
+                }
+
+                draggedType = 'group';
+                draggedRows = getGroupBlock(groupRow);
+            } else if (activityHandle) {
+                draggedType = 'activity';
+                draggedRows = [activityHandle.closest('.activity-row')];
+            } else {
                 event.preventDefault();
                 return;
             }
 
-            draggedRow.classList.add('dragging');
+            orderChanged = false;
+
+            draggedRows.forEach(row => row.classList.add('dragging'));
         });
 
         tbody.addEventListener('dragend', function () {
-            if (draggedRow) {
-                draggedRow.classList.remove('dragging');
-            }
-
-            draggedRow = null;
+            draggedRows.forEach(row => row.classList.remove('dragging'));
 
             if (orderChanged) {
-                saveActivityOrder(tbody);
+                if (draggedType === 'group') {
+                    saveGroupOrder(tbody);
+                    saveActivityOrder(tbody);
+                }
+
+                if (draggedType === 'activity') {
+                    saveActivityOrder(tbody);
+                }
             }
+
+            draggedRows = [];
+            draggedType = null;
+            orderChanged = false;
         });
 
         tbody.addEventListener('dragover', function (event) {
+            if (!draggedRows.length) {
+                return;
+            }
+
             event.preventDefault();
 
             const targetRow = event.target.closest('tr');
 
-            if (!targetRow || targetRow === draggedRow) {
+            if (!targetRow || draggedRows.includes(targetRow)) {
                 return;
             }
 
             const rect = targetRow.getBoundingClientRect();
-            const middle = rect.top + rect.height / 2;
+            const before = event.clientY < rect.top + rect.height / 2;
 
-            orderChanged = true;
-            if (event.clientY < middle) {
-                tbody.insertBefore(draggedRow, targetRow);
-            } else {
-                tbody.insertBefore(draggedRow, targetRow.nextSibling);
+            if (draggedType === 'group') {
+                const targetGroupRow = targetRow.classList.contains('group-row')
+                    ? targetRow
+                    : findGroupRowForActivity(targetRow);
+
+
+                if (!targetGroupRow || draggedRows.includes(targetGroupRow)) {
+                    return;
+                }
+
+                if (!targetGroupRow.dataset.groupId) {
+                    return;
+                }
+
+                orderChanged = true;
+
+                if (before) {
+                    insertRowsBefore(tbody, draggedRows, targetGroupRow);
+                } else {
+                    const targetBlock = getGroupBlock(targetGroupRow);
+                    insertRowsAfter(tbody, draggedRows, targetBlock[targetBlock.length - 1]);
+                }
+
+                refreshGroupPlaceholders(tbody);
+                return;
+            }
+
+            if (draggedType === 'activity') {
+                orderChanged = true;
+
+                if (targetRow.classList.contains('group-row')) {
+                    tbody.insertBefore(draggedRows[0], targetRow.nextElementSibling);
+                    return;
+                }
+
+                if (before) {
+                    tbody.insertBefore(draggedRows[0], targetRow);
+                } else {
+                    tbody.insertBefore(draggedRows[0], targetRow.nextElementSibling);
+                }
             }
         });
     });
 
-    function saveActivityOrder(tbody) {
-        const pageId = tbody.dataset.pageId;
+    function refreshGroupPlaceholders(tbody) {
+        let index = 1;
 
-        const activityIds = Array.from(tbody.querySelectorAll('tr'))
-        .map(row => row.dataset.activityId);
+        tbody.querySelectorAll('.group-row').forEach(groupRow => {
+            const placeholder = groupRow.querySelector('.group-edit-placeholder');
 
-        const params = new URLSearchParams();
-        params.append('pageId', pageId);
-
-        activityIds.forEach(id => {
-            params.append('activityIds', id);
-        });
-
-        fetch('/activities/reorder', {
-            method: 'POST',
-            body: params
-        }).then(response => {
-            if (!response.ok) {
-                throw new Error('Ошибка сохранения порядка');
+            if (!placeholder) {
+                return;
             }
-         }).catch(error => {
-            console.error(error);
-            alert('Не удалось сохранить порядок строк');
+
+            if (!groupRow.dataset.groupId) {
+                placeholder.textContent = 'Без группы';
+                return;
+            }
+
+            placeholder.textContent = 'Группа ' + index;
+            index++;
         });
     }
 </script>
 
-<body>
-
+<body th:classappend="${edit} ? 'edit-mode'">
 <h1>
     Галочки —
     <span th:text="${page.yearMonth()}">2026-04</span>
@@ -687,13 +1058,34 @@
 </div>
 
 <div id="editPanel" class="edit-panel">
-    <form method="post" action="/activities">
+    <form method="post" action="/activities" class="edit-inline-form">
         <input type="hidden" name="pageId" th:value="${page.pageId()}">
         <input type="hidden" name="year" th:value="${page.yearMonth().year}">
         <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
 
         <input type="text" name="title" placeholder="Новое дело" required>
-        <button type="submit">Добавить</button>
+
+        <select name="groupId">
+            <option value="">Без группы</option>
+            <option th:each="group, groupStat : ${page.groups()}"
+                    th:if="${group.groupId() != null}"
+                    th:value="${group.groupId()}"
+                    th:data-group-id="${group.groupId()}"
+                    th:text="${#strings.isEmpty(group.title()) ? 'Группа ' + (groupStat.index + 1) : group.title()}">
+                Группа
+            </option>
+        </select>
+
+        <button type="submit">Добавить дело</button>
+    </form>
+
+    <form method="post" action="/activity-groups" class="edit-inline-form edit-row">
+        <input type="hidden" name="pageId" th:value="${page.pageId()}">
+        <input type="hidden" name="year" th:value="${page.yearMonth().year}">
+        <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
+
+        <input type="text" name="title" placeholder="Новая группа">
+        <button type="submit">Добавить группу</button>
     </form>
 </div>
 
@@ -719,46 +1111,96 @@
         </thead>
 
         <tbody id="activityRows" th:data-page-id="${page.pageId()}">
-        <tr th:each="row : ${page.rows()}" th:data-activity-id="${row.activityId()}">
-            <td class="activity-name">
-                <span class="view-title" th:text="${row.title()}"></span>
+        <th:block th:each="group, groupStat : ${page.groups()}">
+            <tr class="group-row" th:data-group-id="${group.groupId()}">
+                <td class="activity-name group-name">
+                    <span class="group-view-title"
+                          th:text="${#strings.isEmpty(group.title()) ? '' : group.title()}">
+                    </span>
 
-                <div class="activity-edit-line">
-                    <form class="edit-title-form">
-                        <input type="hidden" name="activityId" th:value="${row.activityId()}">
+                    <span class="group-edit-placeholder"
+                          th:text="${group.groupId() == null ? 'Без группы' : 'Группа ' + (groupStat.index + 1)}">
+                        Группа
+                    </span>
+
+                    <form class="group-title-form" th:if="${group.groupId() != null}">
+                        <input type="hidden" name="groupId" th:value="${group.groupId()}">
 
                         <input type="text"
                                name="title"
-                               th:value="${row.title()}"
-                               th:attr="data-original=${row.title()}"
-                               required>
+                               th:value="${group.title()}"
+                               th:attr="data-original=${group.title()}">
                     </form>
 
-                    <form method="post" action="/activities/delete"
-                          onsubmit="return confirm('Удалить дело полностью? Галочки тоже удалятся.');">
-                        <input type="hidden" name="activityId" th:value="${row.activityId()}">
+                    <form method="post"
+                          action="/activity-groups/delete"
+                          th:if="${group.groupId() != null}"
+                          onsubmit="return confirm('Удалить группу? Все дела перейдут в конец блока без группы.');"
+                          style="display:inline;">
+                        <input type="hidden" name="groupId" th:value="${group.groupId()}">
                         <input type="hidden" name="pageId" th:value="${page.pageId()}">
                         <input type="hidden" name="year" th:value="${page.yearMonth().year}">
                         <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
 
-                        <button type="submit" class="erase-btn" title="Стереть дело">⌫</button>
+                        <button type="submit"
+                                class="erase-btn group-delete-btn"
+                                title="Удалить группу">
+                            ⌫
+                        </button>
                     </form>
-                </div>
-            </td>
-            <td class="week-separator"></td>
-            <th:block th:each="weekCells, weekStat : ${row.weeks()}">
-                <td th:each="cell, cellStat : ${weekCells.cells()}"
-                    class="galochka-cell"
-                    th:classappend="|${!page.weeks()[weekStat.index].days()[cellStat.index].currentMonth() ? ' other-month' : ''}${cell.value() != '0' ? ' checked' : ''}|"
-                    th:data-activity-id="${cell.activityId()}"
-                    th:data-date="${cell.date()}"
-                    th:text="${''}">
-                    0
                 </td>
+                <td class="week-separator"></td>
+                <td th:colspan="${page.weeks().size() * 8 - 1}"></td>
+            </tr>
 
-                <td th:if="${!weekStat.last}" class="week-separator"></td>
-            </th:block>
-        </tr>
+            <tr class="activity-row"
+                th:each="row : ${group.rows()}"
+                th:data-activity-id="${row.activityId()}"
+                th:data-group-id="${group.groupId()}">
+                <td class="activity-name">
+                    <span class="view-title" th:text="${row.title()}"></span>
+
+                    <div class="activity-edit-line">
+                        <form class="edit-title-form">
+                            <input type="hidden" name="activityId" th:value="${row.activityId()}">
+
+                            <input type="text"
+                                   name="title"
+                                   th:value="${row.title()}"
+                                   th:attr="data-original=${row.title()}"
+                                   required>
+                        </form>
+
+                        <form method="post" action="/activities/delete"
+                              onsubmit="return confirm('Удалить дело полностью? Галочки тоже удалятся.');">
+                            <input type="hidden" name="activityId" th:value="${row.activityId()}">
+                            <input type="hidden" name="pageId" th:value="${page.pageId()}">
+                            <input type="hidden" name="year" th:value="${page.yearMonth().year}">
+                            <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
+
+                            <button type="submit"
+                                    class="erase-btn activity-delete-btn"
+                                    title="Стереть дело">
+                                ⌫
+                            </button>
+                        </form>
+                    </div>
+                </td>
+                <td class="week-separator"></td>
+                <th:block th:each="weekCells, weekStat : ${row.weeks()}">
+                    <td th:each="cell, cellStat : ${weekCells.cells()}"
+                        class="galochka-cell"
+                        th:classappend="|${!page.weeks()[weekStat.index].days()[cellStat.index].currentMonth() ? ' other-month' : ''}${cell.value() != '0' ? ' checked' : ''}|"
+                        th:data-activity-id="${cell.activityId()}"
+                        th:data-date="${cell.date()}"
+                        th:text="${''}">
+                        0
+                    </td>
+
+                    <td th:if="${!weekStat.last}" class="week-separator"></td>
+                </th:block>
+            </tr>
+        </th:block>
         </tbody>
     </table>
 </div>

@@ -16,29 +16,55 @@ public class ActivityService {
     private final ActivityRepository activityRepository;
     private final GalochkiPageService pageService;
     private final GalochkaRepository galochkaRepository;
+    private final ActivityGroupRepository activityGroupRepository;
 
     public ActivityService(ActivityRepository activityRepository,
                            GalochkiPageService pageService,
-                           GalochkaRepository galochkaRepository) {
+                           GalochkaRepository galochkaRepository,
+                           ActivityGroupRepository activityGroupRepository) {
         this.activityRepository = activityRepository;
         this.pageService = pageService;
         this.galochkaRepository = galochkaRepository;
+        this.activityGroupRepository = activityGroupRepository;
     }
 
     public List<Activity> getActiveActivitiesByPageForCurrentOwner(Long pageId) {
         pageService.getByIdForCurrentOwner(pageId);
-        return activityRepository.findByPageIdAndActiveTrueOrderBySortOrderAscIdAsc(pageId);
+        return activityRepository.findByPageIdAndActiveTrueOrderByGroupSortOrderAscSortOrderAscIdAsc(pageId);
     }
 
     @Transactional
-    public Activity create(Long pageId, String title) {
+    public Activity create(Long pageId, String title, Long groupId) {
         GalochkiPage page = pageService.getByIdForCurrentOwner(pageId);
+
+        ActivityGroup group = null;
+
+        if (groupId != null) {
+            group = activityGroupRepository.findById(groupId)
+                    .orElseThrow(() -> new IllegalArgumentException("Группа не найдена: " + groupId));
+
+            if (!group.getPage().getId().equals(pageId)) {
+                throw new IllegalArgumentException("Группа не принадлежит этой странице");
+            }
+        }
+
+        int sortOrder;
+
+        if (groupId == null) {
+            sortOrder = activityRepository
+                    .findByPageIdAndGroupIsNullAndActiveTrueOrderBySortOrderAscIdAsc(pageId)
+                    .size();
+        } else {
+            sortOrder = activityRepository
+                    .countByPageIdAndGroupIdAndActiveTrue(pageId, groupId);
+        }
 
         Activity activity = new Activity();
         activity.setPage(page);
         activity.setTitle(title);
         activity.setActive(true);
-        activity.setSortOrder(activityRepository.countByPageIdAndActiveTrue(pageId));
+        activity.setGroup(group);
+        activity.setSortOrder(sortOrder);
 
         return activityRepository.save(activity);
     }
@@ -54,7 +80,7 @@ public class ActivityService {
     }
 
     @Transactional
-    public void reorderForCurrentOwner(Long pageId, List<Long> activityIds) {
+    public void reorderForCurrentOwner(Long pageId, List<ActivityReorderGroupDto> groups) {
         pageService.getByIdForCurrentOwner(pageId);
 
         List<Activity> activities = activityRepository.findByPageIdAndActiveTrueOrderBySortOrderAscIdAsc(pageId);
@@ -62,14 +88,34 @@ public class ActivityService {
         Map<Long, Activity> activityMap = activities.stream()
                 .collect(Collectors.toMap(Activity::getId, activity -> activity));
 
-        for (int i = 0; i < activityIds.size(); i++) {
-            Activity activity = activityMap.get(activityIds.get(i));
+        for (ActivityReorderGroupDto groupDto : groups) {
+            Long groupId = groupDto.groupId();
 
-            if (activity == null) {
-                throw new IllegalArgumentException("Дело не найдено на этой странице: " + activityIds.get(i));
+            ActivityGroup group = null;
+
+            if (groupId != null) {
+                group = activityGroupRepository.findById(groupId)
+                        .orElseThrow(() -> new IllegalArgumentException("Группа не найдена: " + groupId));
+
+                if (!group.getPage().getId().equals(pageId)) {
+                    throw new IllegalArgumentException("Группа не принадлежит этой странице");
+                }
             }
 
-            activity.setSortOrder(i);
+            List<Long> activityIds = groupDto.activityIds();
+
+            for (int i = 0; i < activityIds.size(); i++) {
+                Long activityId = activityIds.get(i);
+
+                Activity activity = activityMap.get(activityId);
+
+                if (activity == null) {
+                    throw new IllegalArgumentException("Дело не найдено на этой странице: " + activityId);
+                }
+
+                activity.setGroup(group);
+                activity.setSortOrder(i);
+            }
         }
     }
 

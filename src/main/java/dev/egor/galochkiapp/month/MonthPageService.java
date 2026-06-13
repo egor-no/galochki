@@ -1,7 +1,6 @@
 package dev.egor.galochkiapp.month;
 
-import dev.egor.galochkiapp.activity.Activity;
-import dev.egor.galochkiapp.activity.ActivityService;
+import dev.egor.galochkiapp.activity.*;
 import dev.egor.galochkiapp.galochka.Galochka;
 import dev.egor.galochkiapp.galochka.GalochkaRepository;
 import dev.egor.galochkiapp.page.GalochkiPage;
@@ -20,15 +19,18 @@ import java.util.stream.Collectors;
 public class MonthPageService {
 
     private final ActivityService activityService;
+    private final ActivityGroupRepository groupRepository;
     private final GalochkaRepository galochkaRepository;
     private final GalochkiPageService pageService;
 
     public MonthPageService(ActivityService activityService,
                             GalochkaRepository galochkaRepository,
-                            GalochkiPageService pageService) {
+                            GalochkiPageService pageService,
+                            ActivityGroupRepository groupRepository) {
         this.activityService = activityService;
         this.galochkaRepository = galochkaRepository;
         this.pageService = pageService;
+        this.groupRepository = groupRepository;
     }
 
     public MonthPageDto build(Long pageId, YearMonth yearMonth) {
@@ -53,6 +55,7 @@ public class MonthPageService {
                 ));
 
         List<ActivityRowDto> rows = buildRows(activities, weeks, galochkaMap);
+        List<ActivityGroupDto> groups = buildGroups(pageId, rows);
 
         List<PageOptionDto> pageOptions = pageService.getAllPagesForCurrentOwner().stream()
                 .map(p -> new PageOptionDto(p.getId(), p.getTitle()))
@@ -66,7 +69,8 @@ public class MonthPageService {
                 yearMonth.plusMonths(1),
                 weeks,
                 rows,
-                pageOptions
+                pageOptions,
+                groups
         );
     }
 
@@ -159,12 +163,45 @@ public class MonthPageService {
 
             rows.add(new ActivityRowDto(
                     activity.getId(),
+                    activity.getGroup() == null ? null : activity.getGroup().getId(),
                     activity.getTitle(),
                     activityWeeks
             ));
         }
 
         return rows;
+    }
+
+    private List<ActivityGroupDto> buildGroups(Long pageId, List<ActivityRowDto> rows) {
+        List<ActivityGroup> groups = groupRepository.findByPageIdOrderBySortOrderAscIdAsc(pageId);
+
+        List<ActivityGroupDto> result = new ArrayList<>();
+
+        for (ActivityGroup group : groups) {
+            List<ActivityRowDto> groupRows = rows.stream()
+                    .filter(row -> group.getId().equals(row.groupId()))
+                    .toList();
+
+            result.add(new ActivityGroupDto(
+                    group.getId(),
+                    group.getTitle(),
+                    groupRows
+            ));
+        }
+
+        List<ActivityRowDto> withoutGroupRows = rows.stream()
+                .filter(row -> row.groupId() == null)
+                .toList();
+
+        if (!withoutGroupRows.isEmpty()) {
+            result.add(new ActivityGroupDto(
+                    null,
+                    "",
+                    withoutGroupRows
+            ));
+        }
+
+        return result;
     }
 
     private String key(Long activityId, LocalDate date) {

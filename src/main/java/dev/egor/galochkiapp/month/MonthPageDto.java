@@ -11,6 +11,7 @@ public record MonthPageDto(
         YearMonth nextMonth,
         List<WeekDto> weeks,
         List<ActivityRowDto> rows,
-        List<PageOptionDto> pageOptions
+        List<PageOptionDto> pageOptions,
+        List<ActivityGroupDto> groups
 ) {
 }

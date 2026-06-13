@@ -2,6 +2,7 @@ package dev.egor.galochkiapp.activity;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -19,16 +20,17 @@ public class ActivityPageController {
     @PostMapping("/activities")
     public String create(@RequestParam Long pageId,
                          @RequestParam String title,
+                         @RequestParam(required = false) Long groupId,
                          @RequestParam(required = false) Integer year,
                          @RequestParam(required = false) Integer month) {
 
-        activityService.create(pageId, title);
+        activityService.create(pageId, title, groupId);
 
         if (year != null && month != null) {
-            return "redirect:/month?pageId=" + pageId + "&year=" + year + "&month=" + month;
+            return "redirect:/month?pageId=" + pageId + "&year=" + year + "&month=" + month + "&edit=true";
         }
 
-        return "redirect:/month?pageId=" + pageId;
+        return "redirect:/month?pageId=" + pageId + "&edit=true";
     }
 
     @PostMapping("/activities/update")
@@ -44,9 +46,9 @@ public class ActivityPageController {
     @PostMapping("/activities/reorder")
     @ResponseBody
     public String reorder(@RequestParam Long pageId,
-                          @RequestParam List<Long> activityIds) {
+                          @RequestBody List<ActivityReorderGroupDto> groups) {
 
-        activityService.reorderForCurrentOwner(pageId, activityIds);
+        activityService.reorderForCurrentOwner(pageId, groups);
         return "OK";
     }
 
@@ -58,6 +60,6 @@ public class ActivityPageController {
 
         activityService.deleteForCurrentOwner(activityId);
 
-        return "redirect:/month?pageId=" + pageId + "&year=" + year + "&month=" + month;
+        return "redirect:/month?pageId=" + pageId + "&year=" + year + "&month=" + month + "&edit=true";
     }
 }
