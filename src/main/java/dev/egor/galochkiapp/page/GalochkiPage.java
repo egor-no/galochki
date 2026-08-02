@@ -3,6 +3,7 @@ package dev.egor.galochkiapp.page;
 import dev.egor.galochkiapp.activity.Activity;
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,9 @@ public class GalochkiPage {
 
     @OneToMany(mappedBy = "page", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Activity> activities = new ArrayList<>();
+
+    @Column(name = "weekly_norm", nullable = false, precision = 10, scale = 2)
+    private BigDecimal weeklyNorm = BigDecimal.ZERO;
 
     public Long getId() {
         return id;
@@ -57,5 +61,13 @@ public class GalochkiPage {
 
     public void setOwnerId(Long ownerId) {
         this.ownerId = ownerId;
+    }
+
+    public BigDecimal getWeeklyNorm() {
+        return weeklyNorm;
+    }
+
+    public void setWeeklyNorm(BigDecimal weeklyNorm) {
+        this.weeklyNorm = weeklyNorm;
     }
 }

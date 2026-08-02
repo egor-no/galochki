@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.util.List;
 
@@ -132,7 +133,6 @@ class ActivityGroupServiceIntegrationTest {
     }
 
     private GalochkiPage createPage() {
-        return pageService.create("Тестовая страница", DayOfWeek.MONDAY);
+        return pageService.create("Тестовая страница", DayOfWeek.MONDAY, new BigDecimal("10"));
     }
 }
-

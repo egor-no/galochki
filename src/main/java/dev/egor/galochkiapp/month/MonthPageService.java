@@ -5,6 +5,7 @@ import dev.egor.galochkiapp.galochka.Galochka;
 import dev.egor.galochkiapp.galochka.GalochkaRepository;
 import dev.egor.galochkiapp.page.GalochkiPage;
 import dev.egor.galochkiapp.page.GalochkiPageService;
+import dev.egor.galochkiapp.week.PageWeekOverheadService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -22,15 +23,18 @@ public class MonthPageService {
     private final ActivityGroupRepository groupRepository;
     private final GalochkaRepository galochkaRepository;
     private final GalochkiPageService pageService;
+    private final PageWeekOverheadService overheadService;
 
     public MonthPageService(ActivityService activityService,
                             GalochkaRepository galochkaRepository,
                             GalochkiPageService pageService,
-                            ActivityGroupRepository groupRepository) {
+                            ActivityGroupRepository groupRepository,
+                            PageWeekOverheadService overheadService) {
         this.activityService = activityService;
         this.galochkaRepository = galochkaRepository;
         this.pageService = pageService;
         this.groupRepository = groupRepository;
+        this.overheadService = overheadService;
     }
 
     public MonthPageDto build(Long pageId, YearMonth yearMonth) {
@@ -56,6 +60,7 @@ public class MonthPageService {
 
         List<ActivityRowDto> rows = buildRows(activities, weeks, galochkaMap);
         List<ActivityGroupDto> groups = buildGroups(pageId, rows);
+        List<WeekSummaryDto> weekSummaries = buildWeekSummaries(pageId, weeks, galochki);
 
         List<PageOptionDto> pageOptions = pageService.getAllPagesForCurrentOwner().stream()
                 .map(p -> new PageOptionDto(p.getId(), p.getTitle()))
@@ -70,7 +75,8 @@ public class MonthPageService {
                 weeks,
                 rows,
                 pageOptions,
-                groups
+                groups,
+                weekSummaries
         );
     }
 
@@ -105,6 +111,29 @@ public class MonthPageService {
         }
 
         return weeks;
+    }
+
+    private List<WeekSummaryDto> buildWeekSummaries(Long pageId, List<WeekDto> weeks, List<Galochka> galochki) {
+        Map<LocalDate, BigDecimal> totalsByDate = galochki.stream()
+                .collect(Collectors.groupingBy(Galochka::getDate, Collectors.reducing(BigDecimal.ZERO, Galochka::getValue, BigDecimal::add)));
+
+        List<WeekSummaryDto> result = new ArrayList<>();
+
+        for (WeekDto week : weeks) {
+            List<DaySummaryDto> days = week.days().stream()
+                    .map(day -> new DaySummaryDto(day.date(), totalsByDate.getOrDefault(day.date(), BigDecimal.ZERO)))
+                    .toList();
+
+            BigDecimal weekTotal = days.stream()
+                    .map(DaySummaryDto::total)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal incomingOverhead = overheadService.getIncomingOverhead(pageId, week.startDate());
+
+            result.add(new WeekSummaryDto(week.startDate(), weekTotal, incomingOverhead, days));
+        }
+
+        return result;
     }
 
     private LocalDate moveBackToWeekStart(LocalDate date, DayOfWeek weekStartDay) {
@@ -193,13 +222,11 @@ public class MonthPageService {
                 .filter(row -> row.groupId() == null)
                 .toList();
 
-        if (!withoutGroupRows.isEmpty()) {
-            result.add(new ActivityGroupDto(
-                    null,
-                    "",
-                    withoutGroupRows
-            ));
-        }
+        result.add(new ActivityGroupDto(
+                null,
+                "",
+                withoutGroupRows
+        ));
 
         return result;
     }

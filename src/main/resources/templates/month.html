@@ -472,6 +472,14 @@
         body.edit-mode tr.activity-row:hover .activity-delete-btn {
             display: inline-block !important;
         }
+
+        .empty-group {
+            display: none;
+        }
+
+        body.edit-mode .empty-group {
+            display: table-row;
+        }
     </style>
 </head>
 
@@ -795,6 +803,8 @@
                 next = next.nextElementSibling;
             }
 
+            groupRow.classList.toggle('empty-group', activityIds.length === 0);
+
             result.push({
                 groupId: groupId,
                 activityIds: activityIds
@@ -1112,7 +1122,9 @@
 
         <tbody id="activityRows" th:data-page-id="${page.pageId()}">
         <th:block th:each="group, groupStat : ${page.groups()}">
-            <tr class="group-row" th:data-group-id="${group.groupId()}">
+            <tr class="group-row"
+                th:classappend="${#lists.isEmpty(group.rows())} ? 'empty-group'"
+                th:data-group-id="${group.groupId()}">
                 <td class="activity-name group-name">
                     <span class="group-view-title"
                           th:text="${#strings.isEmpty(group.title()) ? '' : group.title()}">

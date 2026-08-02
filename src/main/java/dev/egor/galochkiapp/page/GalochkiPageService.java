@@ -4,6 +4,7 @@ import dev.egor.galochkiapp.galochka.GalochkaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.util.List;
 
@@ -49,10 +50,14 @@ public class GalochkiPageService {
         pageRepository.delete(page);
     }
 
-    public GalochkiPage create(String title, DayOfWeek weekStartDay) {
+    @Transactional
+    public GalochkiPage create(String title, DayOfWeek weekStartDay, BigDecimal weeklyNorm) {
+        validateWeeklyNorm(weeklyNorm);
+
         GalochkiPage page = new GalochkiPage();
         page.setTitle(title);
         page.setWeekStartDay(weekStartDay);
+        page.setWeeklyNorm(weeklyNorm);
         page.setOwnerId(getCurrentOwnerId());
 
         return pageRepository.save(page);
@@ -65,5 +70,20 @@ public class GalochkiPageService {
     public GalochkiPage getFirstPageForCurrentOwner() {
         return pageRepository.findFirstByOwnerIdOrderById(getCurrentOwnerId())
                 .orElseThrow(() -> new IllegalStateException("Страниц пока нет"));
+    }
+
+    @Transactional
+    public void updateForCurrentOwner(Long pageId, String title, BigDecimal weeklyNorm) {
+        validateWeeklyNorm(weeklyNorm);
+
+        GalochkiPage page = getByIdForCurrentOwner(pageId);
+        page.setTitle(title);
+        page.setWeeklyNorm(weeklyNorm);
+    }
+
+    private void validateWeeklyNorm(BigDecimal weeklyNorm) {
+        if (weeklyNorm == null || weeklyNorm.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Недельная норма не может быть отрицательной");
+        }
     }
 }
