@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,16 +53,31 @@ public class ActivityGroupService {
 
         List<ActivityGroup> groups = groupRepository.findByPageIdOrderBySortOrderAscIdAsc(pageId);
 
+        if (groupIds == null || groupIds.size() != groups.size()) {
+            throw new IllegalArgumentException("Передан неполный список групп");
+        }
+
         Map<Long, ActivityGroup> groupMap = groups.stream()
                 .collect(Collectors.toMap(ActivityGroup::getId, group -> group));
 
-        for (int i = 0; i < groupIds.size(); i++) {
-            ActivityGroup group = groupMap.get(groupIds.get(i));
+        Set<Long> uniqueGroupIds = new HashSet<>();
 
-            if (group == null) {
-                throw new IllegalArgumentException("Группа не найдена на этой странице: " + groupIds.get(i));
+        for (Long groupId : groupIds) {
+            if (groupId == null) {
+                throw new IllegalArgumentException("Идентификатор группы не может быть null");
             }
 
+            if (!uniqueGroupIds.add(groupId)) {
+                throw new IllegalArgumentException("Группа передана повторно: " + groupId);
+            }
+
+            if (!groupMap.containsKey(groupId)) {
+                throw new IllegalArgumentException("Группа не найдена на этой странице: " + groupId);
+            }
+        }
+
+        for (int i = 0; i < groupIds.size(); i++) {
+            ActivityGroup group = groupMap.get(groupIds.get(i));
             group.setSortOrder(i);
         }
     }
@@ -75,10 +92,10 @@ public class ActivityGroupService {
         pageService.getByIdForCurrentOwner(pageId);
 
         List<Activity> groupActivities =
-                activityRepository.findByPageIdAndGroupIdAndActiveTrueOrderBySortOrderAscIdAsc(pageId, groupId);
+                activityRepository.findByPageIdAndGroupIdOrderBySortOrderAscIdAsc(pageId, groupId);
 
         int sortOrder = activityRepository
-                .findByPageIdAndGroupIsNullAndActiveTrueOrderBySortOrderAscIdAsc(pageId)
+                .findByPageIdAndGroupIsNullOrderBySortOrderAscIdAsc(pageId)
                 .size();
 
         for (Activity activity : groupActivities) {

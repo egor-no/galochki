@@ -8,7 +8,11 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     List<Activity> findByPageIdAndGroupIdAndActiveTrueOrderBySortOrderAscIdAsc(Long pageId, Long groupId);
 
+    List<Activity> findByPageIdAndGroupIdOrderBySortOrderAscIdAsc(Long pageId, Long groupId);
+
     List<Activity> findByPageIdAndGroupIsNullAndActiveTrueOrderBySortOrderAscIdAsc(Long pageId);
+
+    List<Activity> findByPageIdAndGroupIsNullOrderBySortOrderAscIdAsc(Long pageId);
 
     List<Activity> findByPageIdAndActiveTrueOrderBySortOrderAscIdAsc(Long pageId);
 

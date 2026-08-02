@@ -8,6 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -85,34 +87,79 @@ public class ActivityService {
 
         List<Activity> activities = activityRepository.findByPageIdAndActiveTrueOrderBySortOrderAscIdAsc(pageId);
 
+        if (groups == null) {
+            throw new IllegalArgumentException("Структура дел не может быть null");
+        }
+
         Map<Long, Activity> activityMap = activities.stream()
                 .collect(Collectors.toMap(Activity::getId, activity -> activity));
 
+        List<ActivityGroup> pageGroups =
+                activityGroupRepository.findByPageIdOrderBySortOrderAscIdAsc(pageId);
+        Map<Long, ActivityGroup> groupMap = pageGroups.stream()
+                .collect(Collectors.toMap(ActivityGroup::getId, group -> group));
+
+        Set<Long> suppliedGroupIds = new HashSet<>();
+        Set<Long> suppliedActivityIds = new HashSet<>();
+        boolean ungroupedSupplied = false;
+
         for (ActivityReorderGroupDto groupDto : groups) {
+            if (groupDto == null) {
+                throw new IllegalArgumentException("Элемент структуры дел не может быть null");
+            }
+
             Long groupId = groupDto.groupId();
 
-            ActivityGroup group = null;
-
             if (groupId != null) {
-                group = activityGroupRepository.findById(groupId)
-                        .orElseThrow(() -> new IllegalArgumentException("Группа не найдена: " + groupId));
-
-                if (!group.getPage().getId().equals(pageId)) {
-                    throw new IllegalArgumentException("Группа не принадлежит этой странице");
+                if (!suppliedGroupIds.add(groupId)) {
+                    throw new IllegalArgumentException("Группа передана повторно: " + groupId);
                 }
+
+                if (!groupMap.containsKey(groupId)) {
+                    throw new IllegalArgumentException("Группа не найдена на этой странице: " + groupId);
+                }
+            } else if (ungroupedSupplied) {
+                throw new IllegalArgumentException("Блок без группы передан повторно");
+            } else {
+                ungroupedSupplied = true;
             }
 
             List<Long> activityIds = groupDto.activityIds();
 
-            for (int i = 0; i < activityIds.size(); i++) {
-                Long activityId = activityIds.get(i);
+            if (activityIds == null) {
+                throw new IllegalArgumentException("Список дел не может быть null");
+            }
 
-                Activity activity = activityMap.get(activityId);
-
-                if (activity == null) {
-                    throw new IllegalArgumentException("Дело не найдено на этой странице: " + activityId);
+            for (Long activityId : activityIds) {
+                if (activityId == null) {
+                    throw new IllegalArgumentException("Идентификатор дела не может быть null");
                 }
 
+                if (!suppliedActivityIds.add(activityId)) {
+                    throw new IllegalArgumentException("Дело передано повторно: " + activityId);
+                }
+
+                if (!activityMap.containsKey(activityId)) {
+                    throw new IllegalArgumentException("Дело не найдено на этой странице: " + activityId);
+                }
+            }
+        }
+
+        if (!suppliedGroupIds.equals(groupMap.keySet())) {
+            throw new IllegalArgumentException("Передана неполная структура групп");
+        }
+
+        if (!suppliedActivityIds.equals(activityMap.keySet())) {
+            throw new IllegalArgumentException("Передана неполная структура дел");
+        }
+
+        for (ActivityReorderGroupDto groupDto : groups) {
+            ActivityGroup group = groupDto.groupId() == null
+                    ? null
+                    : groupMap.get(groupDto.groupId());
+
+            for (int i = 0; i < groupDto.activityIds().size(); i++) {
+                Activity activity = activityMap.get(groupDto.activityIds().get(i));
                 activity.setGroup(group);
                 activity.setSortOrder(i);
             }
