@@ -17,14 +17,14 @@ public class GalochkiPageController {
     }
 
     @PostMapping("/pages")
-    public String create(@RequestParam String title, @RequestParam DayOfWeek weekStartDay, @RequestParam BigDecimal weeklyNorm) {
+    public String create(@RequestParam String title, @RequestParam DayOfWeek weekStartDay, @RequestParam(required = false) BigDecimal weeklyNorm) {
         GalochkiPage page = pageService.create(title, weekStartDay, weeklyNorm);
         return "redirect:/month?pageId=" + page.getId();
     }
 
     @PostMapping("/pages/update")
-    public String update(@RequestParam Long pageId, @RequestParam String title, @RequestParam BigDecimal weeklyNorm, @RequestParam Integer year, @RequestParam Integer month) {
-        pageService.updateForCurrentOwner(pageId, title, weeklyNorm);
+    public String update(@RequestParam Long pageId, @RequestParam String title, @RequestParam Integer year, @RequestParam Integer month) {
+        pageService.updateTitleForCurrentOwner(pageId, title);
         return "redirect:/month?pageId=" + pageId + "&year=" + year + "&month=" + month + "&edit=true";
     }
 

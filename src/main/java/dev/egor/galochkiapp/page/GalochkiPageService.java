@@ -52,12 +52,13 @@ public class GalochkiPageService {
 
     @Transactional
     public GalochkiPage create(String title, DayOfWeek weekStartDay, BigDecimal weeklyNorm) {
-        validateWeeklyNorm(weeklyNorm);
+        BigDecimal normalizedWeeklyNorm = weeklyNorm == null ? BigDecimal.ZERO : weeklyNorm;
+        validateWeeklyNorm(normalizedWeeklyNorm);
 
         GalochkiPage page = new GalochkiPage();
         page.setTitle(title);
         page.setWeekStartDay(weekStartDay);
-        page.setWeeklyNorm(weeklyNorm);
+        page.setWeeklyNorm(normalizedWeeklyNorm);
         page.setOwnerId(getCurrentOwnerId());
 
         return pageRepository.save(page);
