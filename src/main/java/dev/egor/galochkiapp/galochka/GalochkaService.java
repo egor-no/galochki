@@ -12,6 +12,8 @@ import java.time.LocalDate;
 @Service
 public class GalochkaService {
 
+    private static final BigDecimal HALF = new BigDecimal("0.5");
+
     private final GalochkaRepository galochkaRepository;
     private final ActivityRepository activityRepository;
     private final PageWeekOverheadService overheadService;
@@ -23,19 +25,34 @@ public class GalochkaService {
     }
 
     @Transactional
-    public Galochka toggle(Long activityId, LocalDate date) {
+    public Galochka increment(Long activityId, LocalDate date) {
         Galochka galochka = galochkaRepository.findByActivityIdAndDate(activityId, date)
                 .orElseGet(() -> createEmptyGalochka(activityId, date));
 
-        if (BigDecimal.ZERO.compareTo(galochka.getValue()) == 0) {
-            galochka.setValue(BigDecimal.ONE);
-        } else {
-            galochka.setValue(BigDecimal.ZERO);
-        }
+        BigDecimal currentValue = galochka.getValue() == null
+                ? BigDecimal.ZERO
+                : galochka.getValue();
+
+        galochka.setValue(currentValue.add(HALF));
 
         Galochka saved = galochkaRepository.save(galochka);
-        Long pageId = saved.getActivity().getPage().getId();
 
+        Long pageId = saved.getActivity().getPage().getId();
+        overheadService.recalculateFrom(pageId, date);
+
+        return saved;
+    }
+
+    @Transactional
+    public Galochka reset(Long activityId, LocalDate date) {
+        Galochka galochka = galochkaRepository.findByActivityIdAndDate(activityId, date)
+                .orElseGet(() -> createEmptyGalochka(activityId, date));
+
+        galochka.setValue(BigDecimal.ZERO);
+
+        Galochka saved = galochkaRepository.save(galochka);
+
+        Long pageId = saved.getActivity().getPage().getId();
         overheadService.recalculateFrom(pageId, date);
 
         return saved;

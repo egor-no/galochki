@@ -187,44 +187,46 @@
             max-width: 26px;
             height: 26px;
             padding: 0 !important;
+            line-height: 26px;
+            white-space: nowrap;
+            overflow: visible;
             user-select: none;
             font-size: 0;
-            line-height: 26px;
         }
 
-        .galochka-cell::before {
-            content: "";
-            position: absolute;
-            left: 2px;
-            top: 2px;
-            width: 20px;
-            height: 20px;
-            background: transparent;
-            transition: background 0.12s ease, transform 0.08s ease;
-        }
-
-        .galochka-cell:hover::before {
-            background: rgba(255, 255, 255, 0.32);
-            transform: rotate(-1deg);
-        }
-
-        .galochka-cell.checked::after {
-            content: "✓";
-            position: absolute;
-            left: 3px;
-            top: -5px;
-            width: 20px;
-            height: 20px;
+        .full-mark {
+            display: inline-block;
+            width: 12px;
+            margin-left: -2px;
             color: var(--ink);
             font-size: 20px;
             line-height: 26px;
             font-weight: 700;
+            vertical-align: middle;
+            transform: rotate(-4deg);
         }
 
-        .galochka-cell.checked {
-            background: transparent !important;
+        .half-mark {
+            position: relative;
+            display: inline-block;
+            width: 9px;
+            height: 20px;
+            margin-left: -2px;
+            vertical-align: middle;
         }
 
+        .half-mark::after {
+            content: "";
+            position: absolute;
+            left: 1px;
+            top: 11px;
+            width: 9px;
+            height: 3px;
+            border-radius: 2px;
+            background: var(--ink);
+            transform: rotate(45deg);
+        }
+        
         .edit-toggle {
             border: none;
             font-size: 34px;
@@ -562,6 +564,29 @@
 </head>
 
 <script>
+    function applyGalochkaState(cell, rawValue) {
+        const value = Number.parseFloat(rawValue) || 0;
+        const fullMarks = Math.floor(value);
+        const hasHalf = value % 1 >= 0.5;
+
+        cell.replaceChildren();
+
+        for (let i = 0; i < fullMarks; i++) {
+            const mark = document.createElement('span');
+            mark.className = 'full-mark';
+            mark.textContent = '✓';
+            cell.appendChild(mark);
+        }
+
+        if (hasHalf) {
+            const halfMark = document.createElement('span');
+            halfMark.className = 'half-mark';
+            cell.appendChild(halfMark);
+        }
+
+        cell.dataset.value = String(value);
+    }
+
     document.addEventListener('click', function (event) {
         const cell = event.target.closest('.galochka-cell');
 
@@ -576,7 +601,7 @@
         params.append('activityId', activityId);
         params.append('date', date);
 
-        fetch('/api/galochki/toggle', {
+        fetch('/api/galochki/increment', {
             method: 'POST',
             body: params
         })
@@ -587,19 +612,49 @@
                 return response.json();
             })
             .then(data => {
-                cell.textContent = '';
-
-                if (data.value !== '0') {
-                    cell.classList.add('checked');
-                } else {
-                    cell.classList.remove('checked');
-                }
-
+                applyGalochkaState(cell, data.value);
                 window.location.reload();
             })
             .catch(error => {
                 console.error(error);
                 alert('Не удалось сохранить галочку');
+            });
+    });
+
+    document.addEventListener('contextmenu', function (event) {
+        const cell = event.target.closest('.galochka-cell');
+
+        if (!cell) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const activityId = cell.dataset.activityId;
+        const date = cell.dataset.date;
+
+        const params = new URLSearchParams();
+        params.append('activityId', activityId);
+        params.append('date', date);
+
+        fetch('/api/galochki/reset', {
+            method: 'POST',
+            body: params
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Ошибка сброса галочки');
+                }
+
+                return response.json();
+            })
+            .then(data => {
+                applyGalochkaState(cell, data.value);
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Не удалось сбросить значение');
             });
     });
 
@@ -929,6 +984,10 @@
         if (!tbody) {
             return;
         }
+
+        tbody.querySelectorAll('.galochka-cell').forEach(cell => {
+            applyGalochkaState(cell, cell.dataset.value);
+        });
 
         updateDraggableRows(tbody);
 
@@ -1293,11 +1352,10 @@
                 <th:block th:each="weekCells, weekStat : ${row.weeks()}">
                     <td th:each="cell, cellStat : ${weekCells.cells()}"
                         class="galochka-cell"
-                        th:classappend="|${!page.weeks()[weekStat.index].days()[cellStat.index].currentMonth() ? ' other-month' : ''}${cell.value() != '0' ? ' checked' : ''}|"
+                        th:classappend="${!page.weeks()[weekStat.index].days()[cellStat.index].currentMonth()} ? 'other-month'"
                         th:data-activity-id="${cell.activityId()}"
                         th:data-date="${cell.date()}"
-                        th:text="${''}">
-                        0
+                        th:data-value="${cell.value()}">
                     </td>
 
                     <td th:if="${!weekStat.last}" class="week-separator"></td>

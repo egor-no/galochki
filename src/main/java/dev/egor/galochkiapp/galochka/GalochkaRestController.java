@@ -14,10 +14,23 @@ public class GalochkaRestController {
         this.galochkaService = galochkaService;
     }
 
-    @PostMapping("/toggle")
-    public GalochkaValueDto toggle(@RequestParam Long activityId,
-                                   @RequestParam LocalDate date) {
-        Galochka galochka = galochkaService.toggle(activityId, date);
-        return new GalochkaValueDto(galochka.getValue().toPlainString());
+    @PostMapping("/increment")
+    public GalochkaValueDto increment(@RequestParam Long activityId,
+                                      @RequestParam LocalDate date) {
+        Galochka galochka = galochkaService.increment(activityId, date);
+
+        return new GalochkaValueDto(
+                galochka.getValue().stripTrailingZeros().toPlainString()
+        );
+    }
+
+    @PostMapping("/reset")
+    public GalochkaValueDto reset(@RequestParam Long activityId,
+                                  @RequestParam LocalDate date) {
+        Galochka galochka = galochkaService.reset(activityId, date);
+
+        return new GalochkaValueDto(
+                galochka.getValue().stripTrailingZeros().toPlainString()
+        );
     }
 }
