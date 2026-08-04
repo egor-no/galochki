@@ -115,20 +115,21 @@ class PageWeekOverheadServiceIntegrationTest {
 
     @Test
     @DisplayName("Изменение галочки через GalochkaService создаёт и удаляет оверхэд")
-    void toggleChangesOverhead() {
+    void incrementAndResetChangeOverhead() {
         GalochkiPage page = createPage(BigDecimal.ONE);
         Activity first = activityService.create(page.getId(), "Первое", null);
         Activity second = activityService.create(page.getId(), "Второе", null);
         LocalDate date = WEEK_START.plusDays(2);
 
-        galochkaService.toggle(first.getId(), date);
+        galochkaService.increment(first.getId(), date);
         assertThat(overheadRepository.findByPageIdAndWeekStartDate(page.getId(), WEEK_START.plusWeeks(1))).isEmpty();
 
-        galochkaService.toggle(second.getId(), date);
+        galochkaService.increment(first.getId(), date);
+        galochkaService.increment(second.getId(), date);
         assertThat(overheadRepository.findByPageIdAndWeekStartDate(page.getId(), WEEK_START.plusWeeks(1))
-                .orElseThrow().getValue()).isEqualByComparingTo(BigDecimal.ONE);
+                .orElseThrow().getValue()).isEqualByComparingTo("0.5");
 
-        galochkaService.toggle(second.getId(), date);
+        galochkaService.reset(second.getId(), date);
         assertThat(overheadRepository.findByPageIdAndWeekStartDate(page.getId(), WEEK_START.plusWeeks(1))).isEmpty();
     }
 
@@ -146,6 +147,62 @@ class PageWeekOverheadServiceIntegrationTest {
         assertThat(overheadRepository.findByPageIdOrderByWeekStartDateAsc(page.getId())).isEmpty();
     }
 
+    @Test
+    @DisplayName("Цепочка из трёх недель переносит оверхэд до достижения нормы")
+    void recalculatesThreeWeekOverheadChain() {
+        GalochkiPage page = createPage(new BigDecimal("5"));
+        Activity activity = activityService.create(page.getId(), "Дело", null);
+        saveMark(activity, WEEK_START, new BigDecimal("7"));
+        saveMark(activity, WEEK_START.plusWeeks(1), new BigDecimal("4"));
+        saveMark(activity, WEEK_START.plusWeeks(2), new BigDecimal("4"));
+
+        overheadService.recalculateFrom(page.getId(), WEEK_START);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(readOverhead(page.getId(), WEEK_START.plusWeeks(1))).isEqualByComparingTo("2");
+        assertThat(readOverhead(page.getId(), WEEK_START.plusWeeks(2))).isEqualByComparingTo("1");
+        assertThat(overheadRepository.findByPageIdAndWeekStartDate(page.getId(), WEEK_START.plusWeeks(3))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("increment в старой неделе увеличивает все зависимые оверхэды")
+    void incrementInOldWeekIncreasesFollowingOverheads() {
+        GalochkiPage page = createPage(new BigDecimal("5"));
+        Activity activity = activityService.create(page.getId(), "Дело", null);
+        saveMark(activity, WEEK_START, new BigDecimal("7"));
+        saveMark(activity, WEEK_START.plusWeeks(1), new BigDecimal("4"));
+        saveMark(activity, WEEK_START.plusWeeks(2), new BigDecimal("4"));
+        overheadService.recalculateFrom(page.getId(), WEEK_START);
+
+        galochkaService.increment(activity.getId(), WEEK_START);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(readOverhead(page.getId(), WEEK_START.plusWeeks(1))).isEqualByComparingTo("2.5");
+        assertThat(readOverhead(page.getId(), WEEK_START.plusWeeks(2))).isEqualByComparingTo("1.5");
+        assertThat(readOverhead(page.getId(), WEEK_START.plusWeeks(3))).isEqualByComparingTo("0.5");
+    }
+
+    @Test
+    @DisplayName("reset в старой неделе очищает устаревшие зависимые оверхэды")
+    void resetInOldWeekClearsFollowingOverheads() {
+        GalochkiPage page = createPage(new BigDecimal("5"));
+        Activity activity = activityService.create(page.getId(), "Дело", null);
+        saveMark(activity, WEEK_START, new BigDecimal("7"));
+        saveMark(activity, WEEK_START.plusWeeks(1), new BigDecimal("4"));
+        saveMark(activity, WEEK_START.plusWeeks(2), new BigDecimal("4"));
+        overheadService.recalculateFrom(page.getId(), WEEK_START);
+
+        galochkaService.reset(activity.getId(), WEEK_START);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(galochkaRepository.findByActivityIdAndDate(activity.getId(), WEEK_START)
+                .orElseThrow().getValue()).isEqualByComparingTo("0");
+        assertThat(overheadRepository.findByPageIdOrderByWeekStartDateAsc(page.getId())).isEmpty();
+    }
+
     private GalochkiPage createPage(BigDecimal weeklyNorm) {
         return pageService.create("Страница", DayOfWeek.MONDAY, weeklyNorm);
     }
@@ -156,5 +213,10 @@ class PageWeekOverheadServiceIntegrationTest {
         mark.setDate(date);
         mark.setValue(value);
         galochkaRepository.saveAndFlush(mark);
+    }
+
+    private BigDecimal readOverhead(Long pageId, LocalDate weekStart) {
+        return overheadRepository.findByPageIdAndWeekStartDate(pageId, weekStart)
+                .orElseThrow().getValue();
     }
 }

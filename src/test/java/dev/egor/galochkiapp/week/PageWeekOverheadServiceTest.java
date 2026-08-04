@@ -21,36 +21,53 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class PageWeekOverheadServiceTest {
 
-    @Mock
-    private PageWeekOverheadRepository overheadRepository;
-
-    @Mock
-    private GalochkaRepository galochkaRepository;
-
-    @Mock
-    private GalochkiPageService pageService;
-
-    @InjectMocks
-    private PageWeekOverheadService overheadService;
+    @Mock private PageWeekOverheadRepository overheadRepository;
+    @Mock private GalochkaRepository galochkaRepository;
+    @Mock private GalochkiPageService pageService;
+    @InjectMocks private PageWeekOverheadService overheadService;
 
     @Test
-    @DisplayName("Исходящий оверхэд равен положительной части выражения total + incoming - norm")
-    void calculatesPositiveOutgoingOverhead() {
+    @DisplayName("При равенстве итога недельной норме исходящий оверхэд равен нулю")
+    void returnsZeroWhenWeekTotalEqualsNorm() {
         assertThat(overheadService.calculateOutgoingOverhead(
-                new BigDecimal("8.5"), new BigDecimal("4"), new BigDecimal("10")))
-                .isEqualByComparingTo("2.5");
+                new BigDecimal("5"), BigDecimal.ZERO, new BigDecimal("5")))
+                .isEqualByComparingTo("0");
     }
 
     @Test
-    @DisplayName("Исходящий оверхэд не становится отрицательным")
+    @DisplayName("Превышение недельной нормы переносится в следующую неделю")
+    void carriesExcessToNextWeek() {
+        assertThat(overheadService.calculateOutgoingOverhead(
+                new BigDecimal("7"), BigDecimal.ZERO, new BigDecimal("5")))
+                .isEqualByComparingTo("2");
+    }
+
+    @Test
+    @DisplayName("Входящий оверхэд участвует в эффективном итоге недели")
+    void includesIncomingOverheadInEffectiveTotal() {
+        assertThat(overheadService.calculateOutgoingOverhead(
+                new BigDecimal("4"), new BigDecimal("2"), new BigDecimal("5")))
+                .isEqualByComparingTo("1");
+    }
+
+    @Test
+    @DisplayName("Недобор не создаёт отрицательный исходящий оверхэд")
     void clampsOutgoingOverheadToZero() {
         assertThat(overheadService.calculateOutgoingOverhead(
-                new BigDecimal("3"), BigDecimal.ONE, new BigDecimal("10")))
-                .isEqualByComparingTo(BigDecimal.ZERO);
+                new BigDecimal("3"), new BigDecimal("1"), new BigDecimal("5")))
+                .isEqualByComparingTo("0");
     }
 
     @Test
-    @DisplayName("Расчёт оверхэда отклоняет null и отрицательную норму")
+    @DisplayName("Расчёт оверхэда сохраняет дробные значения BigDecimal")
+    void calculatesFractionalOutgoingOverhead() {
+        assertThat(overheadService.calculateOutgoingOverhead(
+                new BigDecimal("3.5"), new BigDecimal("0.5"), new BigDecimal("3.5")))
+                .isEqualByComparingTo("0.5");
+    }
+
+    @Test
+    @DisplayName("Расчёт отклоняет null и отрицательную норму")
     void rejectsInvalidOutgoingOverheadArguments() {
         assertThatThrownBy(() -> overheadService.calculateOutgoingOverhead(null, BigDecimal.ZERO, BigDecimal.ONE))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -60,7 +77,7 @@ class PageWeekOverheadServiceTest {
     }
 
     @Test
-    @DisplayName("getWeekStart возвращает начало недели согласно настройке страницы")
+    @DisplayName("getWeekStart возвращает настроенное начало недели")
     void findsConfiguredWeekStart() {
         GalochkiPage page = new GalochkiPage();
         page.setWeekStartDay(DayOfWeek.WEDNESDAY);
@@ -72,12 +89,11 @@ class PageWeekOverheadServiceTest {
     }
 
     @Test
-    @DisplayName("getWeekStart оставляет дату без изменений, если она уже является началом недели")
+    @DisplayName("getWeekStart сохраняет дату, уже являющуюся началом недели")
     void keepsDateThatIsAlreadyWeekStart() {
         GalochkiPage page = new GalochkiPage();
         page.setWeekStartDay(DayOfWeek.MONDAY);
         when(pageService.getByIdForCurrentOwner(42L)).thenReturn(page);
-
         LocalDate date = LocalDate.of(2026, 4, 6);
 
         assertThat(overheadService.getWeekStart(42L, date)).isEqualTo(date);
