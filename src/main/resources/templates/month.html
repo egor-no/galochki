@@ -103,11 +103,53 @@
         .table-wrap {
             position: relative;
             overflow-x: auto;
+            overflow-y: hidden;
             margin-top: 26px;
             border: none;
             border-radius: 0;
             background: transparent;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
+
+            scrollbar-width: thin;
+            scrollbar-color: var(--ink) rgba(16, 47, 117, 0.12);
+        }
+
+        .table-wrap {
+            scrollbar-width: thin;
+            scrollbar-color: var(--ink) rgba(16, 47, 117, 0.12);
+        }
+
+        /* Chrome, Edge, Safari */
+        .table-wrap::-webkit-scrollbar {
+            height: 14px;
+        }
+
+        .table-wrap::-webkit-scrollbar-track {
+            background: rgba(16, 47, 117, 0.08);
+            border-top: 1px solid rgba(16, 47, 117, 0.35);
+            border-bottom: 1px solid rgba(16, 47, 117, 0.35);
+        }
+
+        .table-wrap::-webkit-scrollbar-thumb {
+            background:
+                    repeating-linear-gradient(
+                            -45deg,
+                            var(--ink),
+                            var(--ink) 3px,
+                            rgba(16, 47, 117, 0.75) 3px,
+                            rgba(16, 47, 117, 0.75) 6px
+                    );
+
+            border: 3px solid var(--paper);
+            border-radius: 8px;
+        }
+
+        .table-wrap::-webkit-scrollbar-thumb:hover {
+            background: var(--ink);
+        }
+
+        .table-wrap::-webkit-scrollbar-corner {
+            background: transparent;
         }
 
         .galochki-table {
@@ -195,9 +237,10 @@
         }
 
         .full-mark {
+            position: relative;
             display: inline-block;
-            width: 12px;
-            margin-left: -2px;
+            width: 10px;
+            margin-left: -4px;
             color: var(--ink);
             font-size: 20px;
             line-height: 26px;
@@ -206,12 +249,24 @@
             transform: rotate(-4deg);
         }
 
+        .full-mark:first-child {
+            margin-left: 0;
+        }
+
+        .full-mark:nth-child(2n) {
+            transform: rotate(2deg);
+        }
+
+        .full-mark:nth-child(3n) {
+            transform: rotate(-7deg);
+        }
+
         .half-mark {
             position: relative;
             display: inline-block;
-            width: 9px;
+            width: 8px;
             height: 20px;
-            margin-left: -2px;
+            margin-left: -4px;
             vertical-align: middle;
         }
 
@@ -226,7 +281,7 @@
             background: var(--ink);
             transform: rotate(45deg);
         }
-        
+
         .edit-toggle {
             border: none;
             font-size: 34px;
@@ -524,12 +579,11 @@
 
         .week-completed-mark {
             display: block;
-            height: 34px;
-            margin-top: -2px;
-            font-size: 37px;
-            line-height: 34px;
-            font-weight: 700;
-            transform: rotate(-7deg);
+            width: 48px;
+            height: 42px;
+            margin: 2px auto 0;
+            object-fit: contain;
+            transform: rotate(-5deg);
         }
 
         .summary-overhead-cell {
@@ -985,6 +1039,31 @@
             return;
         }
 
+        document.querySelectorAll('.random-week-check').forEach(check => {
+            const weekKey = check.dataset.checkKey;
+            const storageKey = `week-check-${weekKey}`;
+
+            let savedCheck;
+
+            try {
+                savedCheck = JSON.parse(localStorage.getItem(storageKey));
+            } catch (error) {
+                savedCheck = null;
+            }
+
+            if (!savedCheck) {
+                savedCheck = {
+                    variant: Math.floor(Math.random() * 3) + 1,
+                    rotation: Math.floor(Math.random() * 9) - 4
+                };
+
+                localStorage.setItem(storageKey, JSON.stringify(savedCheck));
+            }
+
+            check.src = `/galochka-week-${savedCheck.variant}.png`;
+            check.style.transform = `rotate(${savedCheck.rotation}deg)`;
+        });
+
         tbody.querySelectorAll('.galochka-cell').forEach(cell => {
             applyGalochkaState(cell, cell.dataset.value);
         });
@@ -1392,10 +1471,10 @@
                             0
                         </span>
 
-                        <span class="week-completed-mark"
-                              th:if="${effectiveTotal.compareTo(page.weeklyNorm()) >= 0}">
-                            ✓
-                        </span>
+                        <img class="week-completed-mark random-week-check"
+                             th:if="${effectiveTotal.compareTo(page.weeklyNorm()) >= 0}"
+                             th:data-check-key="${page.pageId() + '-' + page.weeks()[weekStat.index].days()[0].date()}"
+                             alt="Норма выполнена">
                     </th:block>
 
                 </td>
