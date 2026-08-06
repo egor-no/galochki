@@ -31,6 +31,10 @@ public class GalochkiPage {
     @Column(name = "weekly_norm", nullable = false, precision = 10, scale = 2)
     private BigDecimal weeklyNorm = BigDecimal.ZERO;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "page_type", nullable = false)
+    private PageType pageType = PageType.HALF_STEP;
+
     public Long getId() {
         return id;
     }
@@ -69,5 +73,17 @@ public class GalochkiPage {
 
     public void setWeeklyNorm(BigDecimal weeklyNorm) {
         this.weeklyNorm = weeklyNorm;
+    }
+
+    public PageType getPageType() {
+        return pageType;
+    }
+
+    public void setPageType(PageType pageType) {
+        this.pageType = pageType;
+    }
+
+    public boolean supportsWeeklyNorm() {
+        return pageType != null && pageType != PageType.NUMBER;
     }
 }

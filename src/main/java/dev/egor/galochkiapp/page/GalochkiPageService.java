@@ -51,16 +51,25 @@ public class GalochkiPageService {
     }
 
     @Transactional
-    public GalochkiPage create(String title, DayOfWeek weekStartDay, BigDecimal weeklyNorm) {
-        BigDecimal normalizedWeeklyNorm = weeklyNorm == null ? BigDecimal.ZERO : weeklyNorm;
-        validateWeeklyNorm(normalizedWeeklyNorm);
+    public GalochkiPage create(String title, DayOfWeek weekStartDay, PageType pageType, BigDecimal weeklyNorm) {
+        if (pageType == null) {
+            throw new IllegalArgumentException("Необходимо выбрать тип страницы");
+        }
+
+        BigDecimal normalizedWeeklyNorm;
+        if (pageType == PageType.NUMBER) {
+            normalizedWeeklyNorm = BigDecimal.ZERO;
+        } else {
+            normalizedWeeklyNorm = weeklyNorm == null ? BigDecimal.ZERO : weeklyNorm;
+            validateWeeklyNorm(normalizedWeeklyNorm);
+        }
 
         GalochkiPage page = new GalochkiPage();
         page.setTitle(title);
         page.setWeekStartDay(weekStartDay);
+        page.setPageType(pageType);
         page.setWeeklyNorm(normalizedWeeklyNorm);
         page.setOwnerId(getCurrentOwnerId());
-
         return pageRepository.save(page);
     }
 
@@ -75,11 +84,16 @@ public class GalochkiPageService {
 
     @Transactional
     public void updateForCurrentOwner(Long pageId, String title, BigDecimal weeklyNorm) {
-        validateWeeklyNorm(weeklyNorm);
-
         GalochkiPage page = getByIdForCurrentOwner(pageId);
         page.setTitle(title);
-        page.setWeeklyNorm(weeklyNorm);
+
+        if (page.supportsWeeklyNorm()) {
+            BigDecimal normalizedWeeklyNorm = weeklyNorm == null ? BigDecimal.ZERO : weeklyNorm;
+            validateWeeklyNorm(normalizedWeeklyNorm);
+            page.setWeeklyNorm(normalizedWeeklyNorm);
+        } else {
+            page.setWeeklyNorm(BigDecimal.ZERO);
+        }
     }
 
     private void validateWeeklyNorm(BigDecimal weeklyNorm) {

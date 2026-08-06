@@ -29,7 +29,7 @@ public class Galochka {
     @Column(name = "mark_date", nullable = false)
     private LocalDate date;
 
-    @Column(name = "mark_value", nullable = false, precision = 5, scale = 2)
+    @Column(name = "mark_value", nullable = false, precision = 12, scale = 4)
     private BigDecimal value = BigDecimal.ZERO;
 
     public Long getId() {

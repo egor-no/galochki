@@ -2,6 +2,7 @@ package dev.egor.galochkiapp.galochka;
 
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @RestController
@@ -14,23 +15,28 @@ public class GalochkaRestController {
         this.galochkaService = galochkaService;
     }
 
-    @PostMapping("/increment")
-    public GalochkaValueDto increment(@RequestParam Long activityId,
-                                      @RequestParam LocalDate date) {
-        Galochka galochka = galochkaService.increment(activityId, date);
+    @PostMapping("/click")
+    public GalochkaValueDto click(@RequestParam Long activityId,
+                                  @RequestParam LocalDate date) {
 
-        return new GalochkaValueDto(
-                galochka.getValue().stripTrailingZeros().toPlainString()
-        );
+        Galochka galochka = galochkaService.handleLeftClick(activityId, date);
+
+        return toDto(galochka);
+    }
+
+    @PostMapping("/value")
+    public GalochkaValueDto setValue(@RequestParam Long activityId, @RequestParam LocalDate date, @RequestParam(required = false) BigDecimal value) {
+        return toDto(galochkaService.setNumericValue(activityId, date, value));
     }
 
     @PostMapping("/reset")
     public GalochkaValueDto reset(@RequestParam Long activityId,
                                   @RequestParam LocalDate date) {
         Galochka galochka = galochkaService.reset(activityId, date);
+        return toDto(galochka);
+    }
 
-        return new GalochkaValueDto(
-                galochka.getValue().stripTrailingZeros().toPlainString()
-        );
+    private GalochkaValueDto toDto(Galochka galochka) {
+        return new GalochkaValueDto(galochka.getValue().stripTrailingZeros().toPlainString());
     }
 }

@@ -7,6 +7,7 @@ import dev.egor.galochkiapp.galochka.GalochkaRepository;
 import dev.egor.galochkiapp.galochka.GalochkaService;
 import dev.egor.galochkiapp.page.GalochkiPage;
 import dev.egor.galochkiapp.page.GalochkiPageService;
+import dev.egor.galochkiapp.page.PageType;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -121,11 +122,11 @@ class PageWeekOverheadServiceIntegrationTest {
         Activity second = activityService.create(page.getId(), "Второе", null);
         LocalDate date = WEEK_START.plusDays(2);
 
-        galochkaService.increment(first.getId(), date);
+        galochkaService.handleLeftClick(first.getId(), date);
         assertThat(overheadRepository.findByPageIdAndWeekStartDate(page.getId(), WEEK_START.plusWeeks(1))).isEmpty();
 
-        galochkaService.increment(first.getId(), date);
-        galochkaService.increment(second.getId(), date);
+        galochkaService.handleLeftClick(first.getId(), date);
+        galochkaService.handleLeftClick(second.getId(), date);
         assertThat(overheadRepository.findByPageIdAndWeekStartDate(page.getId(), WEEK_START.plusWeeks(1))
                 .orElseThrow().getValue()).isEqualByComparingTo("0.5");
 
@@ -175,7 +176,7 @@ class PageWeekOverheadServiceIntegrationTest {
         saveMark(activity, WEEK_START.plusWeeks(2), new BigDecimal("4"));
         overheadService.recalculateFrom(page.getId(), WEEK_START);
 
-        galochkaService.increment(activity.getId(), WEEK_START);
+        galochkaService.handleLeftClick(activity.getId(), WEEK_START);
         entityManager.flush();
         entityManager.clear();
 
@@ -204,7 +205,7 @@ class PageWeekOverheadServiceIntegrationTest {
     }
 
     private GalochkiPage createPage(BigDecimal weeklyNorm) {
-        return pageService.create("Страница", DayOfWeek.MONDAY, weeklyNorm);
+        return pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, weeklyNorm);
     }
 
     private void saveMark(Activity activity, LocalDate date, BigDecimal value) {

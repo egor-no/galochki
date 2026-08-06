@@ -17,8 +17,8 @@ public class GalochkiPageController {
     }
 
     @PostMapping("/pages")
-    public String create(@RequestParam String title, @RequestParam DayOfWeek weekStartDay, @RequestParam(required = false) BigDecimal weeklyNorm) {
-        GalochkiPage page = pageService.create(title, weekStartDay, weeklyNorm);
+    public String create(@RequestParam String title, @RequestParam DayOfWeek weekStartDay, @RequestParam PageType pageType, @RequestParam(required = false) BigDecimal weeklyNorm) {
+        GalochkiPage page = pageService.create(title, weekStartDay, pageType, weeklyNorm);
         return "redirect:/month?pageId=" + page.getId();
     }
 

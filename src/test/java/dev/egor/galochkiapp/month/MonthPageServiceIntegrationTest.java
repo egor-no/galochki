@@ -8,6 +8,7 @@ import dev.egor.galochkiapp.galochka.Galochka;
 import dev.egor.galochkiapp.galochka.GalochkaRepository;
 import dev.egor.galochkiapp.page.GalochkiPage;
 import dev.egor.galochkiapp.page.GalochkiPageService;
+import dev.egor.galochkiapp.page.PageType;
 import dev.egor.galochkiapp.week.PageWeekOverheadService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,7 @@ class MonthPageServiceIntegrationTest {
     @Test
     @DisplayName("Месячная модель содержит страницу, дела и значения галочек на всех показанных днях")
     void buildsCompleteMonthPageModel() {
-        GalochkiPage page = pageService.create("Апрель", DayOfWeek.MONDAY, new BigDecimal("10"));
+        GalochkiPage page = pageService.create("Апрель", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
         Activity activity = activityService.create(page.getId(), "Зарядка", null);
         saveMark(activity, LocalDate.of(2026, 4, 10));
 
@@ -72,7 +73,7 @@ class MonthPageServiceIntegrationTest {
     @Test
     @DisplayName("Группы в месячной модели следуют сохранённому sortOrder")
     void displaysGroupsInPersistedOrder() {
-        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, new BigDecimal("10"));
+        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
         ActivityGroup first = groupService.create(page.getId(), "Первая");
         ActivityGroup second = groupService.create(page.getId(), "Вторая");
         activityService.create(page.getId(), "Дело 1", first.getId());
@@ -91,7 +92,7 @@ class MonthPageServiceIntegrationTest {
     @Test
     @DisplayName("Блок «Без группы» отображается после всех именованных групп")
     void displaysUngroupedActivitiesLast() {
-        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, new BigDecimal("10"));
+        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
         ActivityGroup group = groupService.create(page.getId(), "Именованная группа");
         Activity grouped = activityService.create(page.getId(), "В группе", group.getId());
         Activity ungrouped = activityService.create(page.getId(), "Без группы", null);
@@ -110,7 +111,7 @@ class MonthPageServiceIntegrationTest {
     @Test
     @DisplayName("Апрель 2026 при начале недели в понедельник строится как пять полных недель")
     void buildsFullWeeksFromConfiguredWeekStart() {
-        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, new BigDecimal("10"));
+        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
 
         MonthPageDto result = monthPageService.build(page.getId(), YearMonth.of(2026, 4));
 
@@ -126,7 +127,7 @@ class MonthPageServiceIntegrationTest {
     @Test
     @DisplayName("Недельная сводка содержит суммы дней, сумму недели и входящий оверхэд")
     void buildsWeekSummariesWithDailyTotalsAndIncomingOverhead() {
-        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, new BigDecimal("10"));
+        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
         Activity first = activityService.create(page.getId(), "Первое", null);
         Activity second = activityService.create(page.getId(), "Второе", null);
         saveMark(first, LocalDate.of(2026, 3, 30), new BigDecimal("2"));

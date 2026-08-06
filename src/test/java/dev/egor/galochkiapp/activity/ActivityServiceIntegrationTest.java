@@ -4,6 +4,7 @@ import dev.egor.galochkiapp.galochka.Galochka;
 import dev.egor.galochkiapp.galochka.GalochkaRepository;
 import dev.egor.galochkiapp.page.GalochkiPage;
 import dev.egor.galochkiapp.page.GalochkiPageService;
+import dev.egor.galochkiapp.page.PageType;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -155,6 +156,6 @@ class ActivityServiceIntegrationTest {
     }
 
     private GalochkiPage createPage() {
-        return pageService.create("Тестовая страница", DayOfWeek.MONDAY, new BigDecimal("10"));
+        return pageService.create("Тестовая страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
     }
 }

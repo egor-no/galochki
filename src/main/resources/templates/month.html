@@ -1039,31 +1039,65 @@
             return;
         }
 
-        document.querySelectorAll('.random-week-check').forEach(check => {
-            const weekKey = check.dataset.checkKey;
-            const storageKey = `week-check-${weekKey}`;
+        const weekChecks = document.querySelectorAll('.random-week-check');
 
-            let savedCheck;
+        if (weekChecks.length > 0) {
+            const monthKey = weekChecks[0].dataset.monthKey;
+            const orderStorageKey = `week-check-order-v2-${monthKey}`;
+
+            let variantsOrder;
 
             try {
-                savedCheck = JSON.parse(localStorage.getItem(storageKey));
+                variantsOrder = JSON.parse(localStorage.getItem(orderStorageKey));
             } catch (error) {
-                savedCheck = null;
+                variantsOrder = null;
             }
 
-            if (!savedCheck) {
-                savedCheck = {
-                    variant: Math.floor(Math.random() * 3) + 1,
-                    rotation: Math.floor(Math.random() * 9) - 4
-                };
+            if (
+                !Array.isArray(variantsOrder) ||
+                variantsOrder.length !== 3
+            ) {
+                variantsOrder = [1, 2, 3];
 
-                localStorage.setItem(storageKey, JSON.stringify(savedCheck));
+                for (let i = variantsOrder.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+
+                    [variantsOrder[i], variantsOrder[j]] =
+                        [variantsOrder[j], variantsOrder[i]];
+                }
+
+                localStorage.setItem(
+                    orderStorageKey,
+                    JSON.stringify(variantsOrder)
+                );
             }
 
-            check.src = `/galochka-week-${savedCheck.variant}.png`;
-            check.style.transform = `rotate(${savedCheck.rotation}deg)`;
-        });
+            weekChecks.forEach(check => {
+                const weekIndex = Number(check.dataset.weekIndex);
+                const weekKey = check.dataset.checkKey;
 
+                const rotationStorageKey =
+                    `week-check-rotation-v2-${weekKey}`;
+
+                let rotation = localStorage.getItem(rotationStorageKey);
+
+                if (rotation === null) {
+                    rotation = Math.floor(Math.random() * 9) - 4;
+
+                    localStorage.setItem(
+                        rotationStorageKey,
+                        String(rotation)
+                    );
+                }
+
+                const variant =
+                    variantsOrder[weekIndex % variantsOrder.length];
+
+                check.src = `/galochka-week-${variant}.png`;
+                check.style.transform = `rotate(${rotation}deg)`;
+            });
+        }
+        
         tbody.querySelectorAll('.galochka-cell').forEach(cell => {
             applyGalochkaState(cell, cell.dataset.value);
         });
@@ -1474,6 +1508,8 @@
                         <img class="week-completed-mark random-week-check"
                              th:if="${effectiveTotal.compareTo(page.weeklyNorm()) >= 0}"
                              th:data-check-key="${page.pageId() + '-' + page.weeks()[weekStat.index].days()[0].date()}"
+                             th:data-week-index="${weekStat.index}"
+                             th:data-month-key="${page.pageId() + '-' + page.yearMonth()}"
                              alt="Норма выполнена">
                     </th:block>
 
