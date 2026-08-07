@@ -3,6 +3,7 @@ package dev.egor.galochkiapp.page;
 import dev.egor.galochkiapp.galochka.GalochkaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import dev.egor.galochkiapp.week.PageWeekOverheadRepository;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -15,11 +16,12 @@ public class GalochkiPageService {
 
     private final GalochkiPageRepository pageRepository;
     private final GalochkaRepository galochkaRepository;
+    private final PageWeekOverheadRepository overheadRepository;
 
-    public GalochkiPageService(GalochkiPageRepository pageRepository,
-                               GalochkaRepository galochkaRepository) {
+    public GalochkiPageService(GalochkiPageRepository pageRepository, GalochkaRepository galochkaRepository, PageWeekOverheadRepository overheadRepository) {
         this.pageRepository = pageRepository;
         this.galochkaRepository = galochkaRepository;
+        this.overheadRepository = overheadRepository;
     }
 
     public Long getCurrentOwnerId() {
@@ -45,8 +47,8 @@ public class GalochkiPageService {
     public void deleteForCurrentOwner(Long pageId) {
         GalochkiPage page = getByIdForCurrentOwner(pageId);
 
+        overheadRepository.deleteByPageId(pageId);
         galochkaRepository.deleteByActivityPageId(pageId);
-
         pageRepository.delete(page);
     }
 
