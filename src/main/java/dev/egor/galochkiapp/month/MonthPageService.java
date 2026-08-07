@@ -138,6 +138,15 @@ public class MonthPageService {
         return result;
     }
 
+    public List<WeekSummaryDto> buildWeekSummaries(Long pageId, YearMonth yearMonth) {
+        GalochkiPage page = pageService.getByIdForCurrentOwner(pageId);
+        List<WeekDto> weeks = buildWeeks(yearMonth, page.getWeekStartDay());
+        LocalDate start = weeks.get(0).startDate();
+        LocalDate end = weeks.get(weeks.size() - 1).endDate();
+        List<Galochka> galochki = galochkaRepository.findByActivityPageIdAndDateBetween(pageId, start, end);
+        return buildWeekSummaries(pageId, weeks, galochki);
+    }
+
     private LocalDate moveBackToWeekStart(LocalDate date, DayOfWeek weekStartDay) {
         LocalDate result = date;
 
