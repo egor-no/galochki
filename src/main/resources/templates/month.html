@@ -45,6 +45,9 @@
             font-size: 54px;
             font-weight: 700;
             letter-spacing: 1px;
+        }
+
+        .heading-text {
             text-decoration: underline;
             text-decoration-thickness: 2px;
             text-underline-offset: 8px;
@@ -289,20 +292,22 @@
             vertical-align: middle;
         }
 
-        .edit-panel {
+        .page-edit-panel,
+        .page-create-panel,
+        .activities-edit-panel {
             display: none;
-            margin-bottom: 20px;
         }
 
-        body.edit-mode .edit-panel {
+        body.page-edit-mode .page-edit-panel {
             display: block;
         }
 
-        .edit-col {
-            display: none;
-            width: 34px !important;
-            min-width: 34px !important;
-            max-width: 34px !important;
+        body.page-create-mode .page-create-panel {
+            display: block;
+        }
+
+        body.activities-edit-mode .activities-edit-panel {
+            display: block;
         }
 
         .edit-row {
@@ -330,11 +335,11 @@
             align-items: center;
         }
 
-        body.edit-mode .view-title {
+        body.activities-edit-mode .view-title {
             display: none;
         }
 
-        body.edit-mode .edit-title-form {
+        body.activities-edit-mode .edit-title-form {
             display: flex;
         }
 
@@ -361,18 +366,13 @@
                     );
         }
 
-
-        body.edit-mode .edit-col {
-            display: table-cell;
-        }
-
         .activity-edit-line {
             display: none;
             align-items: center;
             gap: 4px;
         }
 
-        body.edit-mode .activity-edit-line {
+        body.activities-edit-mode .activity-edit-line {
             display: flex;
         }
 
@@ -433,11 +433,7 @@
             }
         }
 
-        body.edit-mode .activity-name {
-            cursor: grab;
-        }
-
-        body.edit-mode tr.dragging .activity-name {
+        tr.dragging .activity-name {
             cursor: grabbing;
         }
 
@@ -489,14 +485,6 @@
             display: inline-block;
         }
 
-        body.edit-mode .group-row .group-name {
-            cursor: grab;
-        }
-
-        body.edit-mode tr.activity-row .activity-name {
-            cursor: grab;
-        }
-
         tr.dragging .activity-name {
             opacity: 0.45;
         }
@@ -506,7 +494,7 @@
             opacity: 0.55;
         }
 
-        body.edit-mode .group-row .group-view-title:empty + .group-edit-placeholder {
+        body.activities-edit-mode .group-row .group-view-title:empty + .group-edit-placeholder {
             display: inline;
         }
 
@@ -514,28 +502,32 @@
             display: none !important;
         }
 
-        body.edit-mode .group-row:hover .group-delete-btn {
+        body.activities-edit-mode .group-row:hover .group-delete-btn {
             display: inline-block !important;
         }
 
-        body.edit-mode .group-row:hover .group-delete-btn {
-            display: inline-block;
+        body.activities-edit-mode tr.activity-row:hover .activity-delete-btn {
+            display: inline-block !important;
+        }
+
+        body.activities-edit-mode .empty-group {
+            display: table-row;
+        }
+
+        body.activities-edit-mode .group-row .group-name {
+            cursor: grab;
+        }
+
+        body.activities-edit-mode tr.activity-row .activity-name {
+            cursor: grab;
         }
 
         .activity-delete-btn {
             display: none !important;
         }
 
-        body.edit-mode tr.activity-row:hover .activity-delete-btn {
-            display: inline-block !important;
-        }
-
         .empty-group {
             display: none;
-        }
-
-        body.edit-mode .empty-group {
-            display: table-row;
         }
 
         .summary-row td {
@@ -640,6 +632,35 @@
         .numeric-value-input:focus {
             outline: 2px solid var(--ink);
             outline-offset: -2px;
+        }
+
+        .activities-edit-toggle {
+            border: none;
+            background: transparent;
+            padding: 0 4px;
+            font-size: 25px;
+            vertical-align: middle;
+        }
+
+        .empty-add-button {
+            border: none;
+            background: transparent;
+            padding: 0 4px;
+            font-size: 27px;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+
+        .page-edit-panel,
+        .page-create-panel,
+        .activities-edit-panel {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .page-edit-panel .edit-row,
+        .page-create-panel .edit-row {
+            margin-bottom: 0;
         }
     </style>
 </head>
@@ -874,23 +895,31 @@
             });
     });
 
-    function toggleEditMode() {
-        const editModeEnabled = document.body.classList.toggle('edit-mode');
+    function togglePageEdit() {
+        document.body.classList.toggle('page-edit-mode');
+        document.body.classList.remove('page-create-mode');
+    }
+
+    function togglePageCreate() {
+        document.body.classList.toggle('page-create-mode');
+        document.body.classList.remove('page-edit-mode');
+    }
+
+    function toggleActivitiesEdit() {
+        const enabled = document.body.classList.toggle('activities-edit-mode');
+
+        const tbody = document.getElementById('activityRows');
+        if (tbody) updateDraggableRows(tbody);
+
         const url = new URL(window.location.href);
 
-        if (editModeEnabled) {
-            url.searchParams.set('edit', 'true');
+        if (enabled) {
+            url.searchParams.set('editActivities', 'true');
         } else {
-            url.searchParams.delete('edit');
+            url.searchParams.delete('editActivities');
         }
 
         window.history.replaceState({}, '', url);
-
-        const tbody = document.getElementById('activityRows');
-
-        if (tbody) {
-            updateDraggableRows(tbody);
-        }
     }
 
     document.addEventListener('submit', function (event) {
@@ -947,7 +976,7 @@
     });
 
     document.addEventListener('dblclick', function (event) {
-        if (!document.body.classList.contains('edit-mode')) {
+        if (!document.body.classList.contains('activities-edit-mode')) {
             return;
         }
 
@@ -1079,7 +1108,7 @@
     }
 
     function updateDraggableRows(tbody) {
-        const editable = document.body.classList.contains('edit-mode');
+        const editable = document.body.classList.contains('activities-edit-mode');
 
         tbody.querySelectorAll('.activity-row .activity-name').forEach(cell => {
             cell.draggable = editable;
@@ -1288,7 +1317,7 @@
         updateDraggableRows(tbody);
 
         tbody.addEventListener('dragstart', function (event) {
-            if (!document.body.classList.contains('edit-mode')) {
+            if (!document.body.classList.contains('activities-edit-mode')) {
                 event.preventDefault();
                 return;
             }
@@ -1424,13 +1453,25 @@
     }
 </script>
 
-<body th:classappend="${edit} ? 'edit-mode'">
+<body>
 <h1>
-    Галочки —
-    <span th:text="${page.yearMonth()}">2026-04</span>
+    <span class="heading-text">
+        Галочки —
+        <span th:text="${page.yearMonth()}">2026-04</span>
+    </span>
 
-    <button type="button" class="edit-toggle" onclick="toggleEditMode()" title="Редактировать">
+    <button type="button"
+            class="edit-toggle"
+            onclick="togglePageEdit()"
+            title="Редактировать страницу">
         ✎
+    </button>
+
+    <button type="button"
+            class="edit-toggle"
+            onclick="togglePageCreate()"
+            title="Создать новую страницу">
+        ＋
     </button>
 </h1>
 
@@ -1450,16 +1491,20 @@
     </form>
 </div>
 
-<div class="edit-panel">
+<div class="page-edit-panel">
     <div class="edit-row">
         <form method="post" action="/pages/update" class="edit-inline-form">
             <input type="hidden" name="pageId" th:value="${page.pageId()}">
             <input type="hidden" name="year" th:value="${page.yearMonth().year}">
             <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
 
-            <input type="text" name="title" th:value="${page.pageTitle()}" required>
+            <input type="text"
+                   name="title"
+                   th:value="${page.pageTitle()}"
+                   required>
 
-            <span class="week-start-disabled" title="Пока нельзя менять первый день недели">
+            <span class="week-start-disabled"
+                  title="Пока нельзя менять первый день недели">
                 <select disabled>
                     <option value="MONDAY">Понедельник</option>
                     <option value="TUESDAY">Вторник</option>
@@ -1474,24 +1519,43 @@
             <button type="submit">Сохранить страницу</button>
         </form>
 
-        <form method="post" action="/pages/delete" class="edit-inline-form"
+        <form method="post"
+              action="/pages/delete"
+              class="edit-inline-form"
               onsubmit="return confirm('Удалить страницу полностью? Все дела и галочки тоже удалятся.');">
-            <input type="hidden" name="pageId" th:value="${page.pageId()}">
+            <input type="hidden"
+                   name="pageId"
+                   th:value="${page.pageId()}">
+
             <button type="submit">Стереть страницу</button>
         </form>
     </div>
+</div>
 
-    <form method="post" action="/pages" class="edit-inline-form edit-row page-create-form">
-        <input type="text" name="title" placeholder="Новая страница" required>
+<div class="page-create-panel">
+    <form method="post"
+          action="/pages"
+          class="edit-inline-form edit-row page-create-form">
 
-        <select name="pageType" class="page-type-select" required>
+        <input type="text"
+               name="title"
+               placeholder="Новая страница"
+               required>
+
+        <select name="pageType"
+                class="page-type-select"
+                required>
             <option value="HALF_STEP">Половинчатые галочки</option>
             <option value="BINARY">Обычные галочки</option>
             <option value="NUMBER">Числовые значения</option>
         </select>
 
         <span class="weekly-norm-field">
-            <input type="number" name="weeklyNorm" min="0" step="0.01" placeholder="Недельная норма">
+            <input type="number"
+                   name="weeklyNorm"
+                   min="0"
+                   step="0.01"
+                   placeholder="Недельная норма">
         </span>
 
         <select name="weekStartDay" required>
@@ -1512,7 +1576,8 @@
     <a th:href="@{/month(pageId=${page.pageId()}, year=${page.previousMonth().year}, month=${page.previousMonth().monthValue})}">        ← Предыдущий месяц
     </a>
 
-    <a th:href="@{/month}" style="margin: 0 16px;">
+    <a th:href="@{/month(pageId=${page.pageId()})}"
+       style="margin: 0 16px;">
         Текущий месяц
     </a>
 
@@ -1521,7 +1586,7 @@
     </a>
 </div>
 
-<div id="editPanel" class="edit-panel">
+<div id="activitiesEditPanel" class="activities-edit-panel">
     <form method="post" action="/activities" class="edit-inline-form">
         <input type="hidden" name="pageId" th:value="${page.pageId()}">
         <input type="hidden" name="year" th:value="${page.yearMonth().year}">
@@ -1555,13 +1620,29 @@
 
 <p th:if="${#lists.isEmpty(page.rows())}">
     Пока данных нет.
+
+    <button type="button"
+            class="empty-add-button"
+            onclick="toggleActivitiesEdit()"
+            title="Добавить дело">
+        Добавить ＋
+    </button>
 </p>
 
 <div class="table-wrap">
     <table th:if="${!#lists.isEmpty(page.rows())}" class="galochki-table">
         <thead>
         <tr>
-            <th class="activity-head">Дело</th>
+            <th class="activity-head">
+                Дело
+
+                <button type="button"
+                        class="activities-edit-toggle"
+                        onclick="toggleActivitiesEdit()"
+                        title="Редактировать дела и группы">
+                    ✎
+                </button>
+            </th>
             <th class="week-separator"></th>
             <th:block th:each="week, weekStat : ${page.weeks()}">
                 <th th:each="day : ${week.days()}"
