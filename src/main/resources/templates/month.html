@@ -613,17 +613,64 @@
             text-align: center;
         }
 
+        .galochki-table td.numeric-cell {
+            width: 64px;
+            min-width: 64px;
+            max-width: 64px;
+        }
 
+        .numeric-value-input {
+            width: 58px;
+            height: 24px;
+            padding: 0 3px;
+            border: none;
+            font-size: 19px;
+            line-height: 24px;
+            text-align: center;
+            background: transparent;
+            appearance: textfield;
+        }
+
+        .numeric-value-input::-webkit-inner-spin-button,
+        .numeric-value-input::-webkit-outer-spin-button {
+            margin: 0;
+            appearance: none;
+        }
+
+        .numeric-value-input:focus {
+            outline: 2px solid var(--ink);
+            outline-offset: -2px;
+        }
     </style>
 </head>
 
 <script>
     function applyGalochkaState(cell, rawValue) {
         const value = Number.parseFloat(rawValue) || 0;
-        const fullMarks = Math.floor(value);
-        const hasHalf = value % 1 >= 0.5;
+        const pageType = cell.dataset.pageType;
+
+        cell.dataset.value = String(value);
+
+        if (pageType === 'NUMBER') {
+            const input = cell.querySelector('.numeric-value-input');
+            if (input) input.value = value === 0 ? '' : String(value);
+            return;
+        }
 
         cell.replaceChildren();
+
+        if (pageType === 'BINARY') {
+            if (value !== 0) {
+                const mark = document.createElement('span');
+                mark.className = 'full-mark';
+                mark.textContent = '✓';
+                cell.appendChild(mark);
+            }
+            return;
+        }
+
+        const fullMarks = Math.floor(value);
+        const hasHalf = value % 1 >= 0.5;
 
         for (let i = 0; i < fullMarks; i++) {
             const mark = document.createElement('span');
@@ -637,32 +684,20 @@
             halfMark.className = 'half-mark';
             cell.appendChild(halfMark);
         }
-
-        cell.dataset.value = String(value);
     }
 
     document.addEventListener('click', function (event) {
         const cell = event.target.closest('.galochka-cell');
 
-        if (!cell) {
-            return;
-        }
-
-        const activityId = cell.dataset.activityId;
-        const date = cell.dataset.date;
+        if (!cell || cell.dataset.pageType === 'NUMBER') return;
 
         const params = new URLSearchParams();
-        params.append('activityId', activityId);
-        params.append('date', date);
+        params.append('activityId', cell.dataset.activityId);
+        params.append('date', cell.dataset.date);
 
-        fetch('/api/galochki/increment', {
-            method: 'POST',
-            body: params
-        })
+        fetch('/api/galochki/click', {method: 'POST', body: params})
             .then(response => {
-                if (!response.ok) {
-                    throw new Error('Ошибка сохранения галочки');
-                }
+                if (!response.ok) throw new Error('Ошибка сохранения галочки');
                 return response.json();
             })
             .then(data => {
@@ -709,6 +744,33 @@
             .catch(error => {
                 console.error(error);
                 alert('Не удалось сбросить значение');
+            });
+    });
+
+    document.addEventListener('change', function (event) {
+        const input = event.target.closest('.numeric-value-input');
+
+        if (!input) return;
+
+        const cell = input.closest('.galochka-cell');
+        const params = new URLSearchParams();
+
+        params.append('activityId', cell.dataset.activityId);
+        params.append('date', cell.dataset.date);
+
+        if (input.value.trim() !== '') params.append('value', input.value);
+
+        fetch('/api/galochki/value', {method: 'POST', body: params})
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка сохранения значения');
+                return response.json();
+            })
+            .then(data => {
+                applyGalochkaState(cell, data.value);
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Не удалось сохранить значение');
             });
     });
 
@@ -902,6 +964,20 @@
     let draggedType = null;
     let orderChanged = false;
 
+    function updateWeeklyNormField(form) {
+        const pageType = form.querySelector('.page-type-select');
+        const normField = form.querySelector('.weekly-norm-field');
+        const normInput = form.querySelector('input[name="weeklyNorm"]');
+
+        if (!pageType || !normField || !normInput) return;
+
+        const numeric = pageType.value === 'NUMBER';
+        normField.style.display = numeric ? 'none' : '';
+        normInput.disabled = numeric;
+
+        if (numeric) normInput.value = '';
+    }
+
     function updateDraggableRows(tbody) {
         const editable = document.body.classList.contains('edit-mode');
 
@@ -1033,6 +1109,13 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.page-create-form').forEach(form => {
+            updateWeeklyNormField(form);
+
+            const select = form.querySelector('.page-type-select');
+            if (select) select.addEventListener('change', () => updateWeeklyNormField(form));
+        });
+
         const tbody = document.getElementById('activityRows');
 
         if (!tbody) {
@@ -1298,10 +1381,18 @@
         </form>
     </div>
 
-    <form method="post" action="/pages" class="edit-inline-form edit-row">
+    <form method="post" action="/pages" class="edit-inline-form edit-row page-create-form">
         <input type="text" name="title" placeholder="Новая страница" required>
 
-        <input type="number" name="weeklyNorm" min="0" step="0.01" placeholder="Недельная норма">
+        <select name="pageType" class="page-type-select" required>
+            <option value="HALF_STEP">Половинчатые галочки</option>
+            <option value="BINARY">Обычные галочки</option>
+            <option value="NUMBER">Числовые значения</option>
+        </select>
+
+        <span class="weekly-norm-field">
+            <input type="number" name="weeklyNorm" min="0" step="0.01" placeholder="Недельная норма">
+        </span>
 
         <select name="weekStartDay" required>
             <option value="MONDAY">Понедельник</option>
@@ -1383,7 +1474,9 @@
         </tr>
         </thead>
 
-        <tbody id="activityRows" th:data-page-id="${page.pageId()}">
+        <tbody id="activityRows"
+               th:data-page-id="${page.pageId()}"
+               th:data-page-type="${page.pageType()}">
         <th:block th:each="group, groupStat : ${page.groups()}">
             <tr class="group-row"
                 th:classappend="${#lists.isEmpty(group.rows())} ? 'empty-group'"
@@ -1465,10 +1558,18 @@
                 <th:block th:each="weekCells, weekStat : ${row.weeks()}">
                     <td th:each="cell, cellStat : ${weekCells.cells()}"
                         class="galochka-cell"
-                        th:classappend="${!page.weeks()[weekStat.index].days()[cellStat.index].currentMonth()} ? 'other-month'"
+                        th:classappend="|${!page.weeks()[weekStat.index].days()[cellStat.index].currentMonth() ? 'other-month ' : ''}${page.pageType().name() == 'NUMBER' ? 'numeric-cell' : ''}|"
                         th:data-activity-id="${cell.activityId()}"
                         th:data-date="${cell.date()}"
-                        th:data-value="${cell.value()}">
+                        th:data-value="${cell.value()}"
+                        th:data-page-type="${page.pageType()}">
+
+                        <input th:if="${page.pageType().name() == 'NUMBER'}"
+                               type="number"
+                               class="numeric-value-input"
+                               step="any"
+                               th:value="${cell.value() == '0' ? '' : cell.value()}"
+                               aria-label="Числовое значение">
                     </td>
 
                     <td th:if="${!weekStat.last}" class="week-separator"></td>

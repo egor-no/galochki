@@ -4,11 +4,33 @@
     <meta charset="UTF-8">
     <title>Создать страницу</title>
 </head>
+
+<script>
+    function updateWeeklyNormField(form) {
+        const pageType = form.querySelector('.page-type-select');
+        const normField = form.querySelector('.weekly-norm-field');
+        const normInput = form.querySelector('input[name="weeklyNorm"]');
+
+        if (!pageType || !normField || !normInput) return;
+
+        const numeric = pageType.value === 'NUMBER';
+        normField.style.display = numeric ? 'none' : '';
+        normInput.disabled = numeric;
+
+        if (numeric) normInput.value = '';
+    }
+
+    document.querySelectorAll('.page-create-form').forEach(form => {
+        updateWeeklyNormField(form);
+        form.querySelector('.page-type-select').addEventListener('change', () => updateWeeklyNormField(form));
+    });
+</script>
+
 <body>
 
 <h1>Создать первую страницу галочек</h1>
 
-<form method="post" action="/pages">
+<form method="post" action="/pages" class="page-create-form">
     <div>
         <label>
             Название:
@@ -18,25 +40,28 @@
 
     <div style="margin-top: 12px;">
         <label>
-            Первый день недели:
-            <select name="weekStartDay" required>
-                <option th:each="day : ${weekDays}"
-                        th:value="${day}"
-                        th:text="${day}">
-                    MONDAY
-                </option>
+            Тип страницы:
+            <select name="pageType" class="page-type-select" required>
+                <option value="HALF_STEP">Половинчатые галочки</option>
+                <option value="BINARY">Обычные галочки</option>
+                <option value="NUMBER">Числовые значения</option>
             </select>
         </label>
     </div>
 
     <div style="margin-top: 12px;">
         <label>
+            Первый день недели:
+            <select name="weekStartDay" required>
+                <option th:each="day : ${weekDays}" th:value="${day}" th:text="${day}">MONDAY</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="weekly-norm-field" style="margin-top: 12px;">
+        <label>
             Недельная норма:
-            <input type="number"
-                   name="weeklyNorm"
-                   min="0"
-                   step="0.01"
-                   placeholder="Необязательно">
+            <input type="number" name="weeklyNorm" min="0" step="0.01" placeholder="Необязательно">
         </label>
     </div>
 

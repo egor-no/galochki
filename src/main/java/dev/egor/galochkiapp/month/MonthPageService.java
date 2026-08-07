@@ -69,6 +69,7 @@ public class MonthPageService {
         return new MonthPageDto(
                 page.getId(),
                 page.getTitle(),
+                page.getPageType(),
                 page.getWeeklyNorm(),
                 yearMonth,
                 yearMonth.minusMonths(1),
