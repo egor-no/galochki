@@ -1,0 +1,31 @@
+<div id="activitiesEditPanel" class="activities-edit-panel" xmlns:th="http://www.thymeleaf.org" th:fragment="activities-edit-form">
+    <form method="post" action="/activities" class="edit-inline-form">
+        <input type="hidden" name="pageId" th:value="${page.pageId()}">
+        <input type="hidden" name="year" th:value="${page.yearMonth().year}">
+        <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
+
+        <input type="text" name="title" placeholder="Новое дело" required>
+
+        <select name="groupId">
+            <option value="">Без группы</option>
+            <option th:each="group, groupStat : ${page.groups()}"
+                    th:if="${group.groupId() != null}"
+                    th:value="${group.groupId()}"
+                    th:data-group-id="${group.groupId()}"
+                    th:text="${#strings.isEmpty(group.title()) ? 'Группа ' + (groupStat.index + 1) : group.title()}">
+                Группа
+            </option>
+        </select>
+
+        <button type="submit">Добавить дело</button>
+    </form>
+
+    <form method="post" action="/activity-groups" class="edit-inline-form edit-row">
+        <input type="hidden" name="pageId" th:value="${page.pageId()}">
+        <input type="hidden" name="year" th:value="${page.yearMonth().year}">
+        <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
+
+        <input type="text" name="title" placeholder="Новая группа">
+        <button type="submit">Добавить группу</button>
+    </form>
+</div>

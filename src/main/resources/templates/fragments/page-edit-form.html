@@ -1,0 +1,40 @@
+<div class="page-edit-panel" xmlns:th="http://www.thymeleaf.org" th:fragment="page-edit-form">
+    <div class="edit-row">
+        <form method="post" action="/pages/update" class="edit-inline-form">
+            <input type="hidden" name="pageId" th:value="${page.pageId()}">
+            <input type="hidden" name="year" th:value="${page.yearMonth().year}">
+            <input type="hidden" name="month" th:value="${page.yearMonth().monthValue}">
+
+            <input type="text"
+                   name="title"
+                   th:value="${page.pageTitle()}"
+                   required>
+
+            <span class="week-start-disabled"
+                  title="Пока нельзя менять первый день недели">
+                <select disabled>
+                    <option value="MONDAY">Понедельник</option>
+                    <option value="TUESDAY">Вторник</option>
+                    <option value="WEDNESDAY">Среда</option>
+                    <option value="THURSDAY">Четверг</option>
+                    <option value="FRIDAY">Пятница</option>
+                    <option value="SATURDAY">Суббота</option>
+                    <option value="SUNDAY">Воскресенье</option>
+                </select>
+            </span>
+
+            <button type="submit">Сохранить страницу</button>
+        </form>
+
+        <form method="post"
+              action="/pages/delete"
+              class="edit-inline-form"
+              onsubmit="return confirm('Удалить страницу полностью? Все дела и галочки тоже удалятся.');">
+            <input type="hidden"
+                   name="pageId"
+                   th:value="${page.pageId()}">
+
+            <button type="submit">Стереть страницу</button>
+        </form>
+    </div>
+</div>
