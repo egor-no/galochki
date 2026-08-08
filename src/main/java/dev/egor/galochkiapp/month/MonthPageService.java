@@ -9,6 +9,7 @@ import dev.egor.galochkiapp.week.PageWeekOverheadService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -60,7 +61,7 @@ public class MonthPageService {
 
         List<ActivityRowDto> rows = buildRows(activities, weeks, galochkaMap);
         List<ActivityGroupDto> groups = buildGroups(pageId, rows);
-        List<WeekSummaryDto> weekSummaries = buildWeekSummaries(pageId, weeks, galochki);
+        List<WeekSummaryDto> weekSummaries = buildWeekSummaries(page, weeks, galochki);
 
         List<PageOptionDto> pageOptions = pageService.getAllPagesForCurrentOwner().stream()
                 .map(p -> new PageOptionDto(p.getId(), p.getTitle()))
@@ -71,6 +72,10 @@ public class MonthPageService {
                 page.getTitle(),
                 page.getPageType(),
                 page.getWeeklyNorm(),
+                page.isShowStatisticsWithoutNorm(),
+                page.isShowWeekCompletedCheck(),
+                page.isShowWeekPercentage(),
+                page.shouldShowStatistics(),
                 yearMonth,
                 yearMonth.minusMonths(1),
                 yearMonth.plusMonths(1),
@@ -115,7 +120,7 @@ public class MonthPageService {
         return weeks;
     }
 
-    private List<WeekSummaryDto> buildWeekSummaries(Long pageId, List<WeekDto> weeks, List<Galochka> galochki) {
+    private List<WeekSummaryDto> buildWeekSummaries(GalochkiPage page, List<WeekDto> weeks, List<Galochka> galochki) {
         Map<LocalDate, BigDecimal> totalsByDate = galochki.stream()
                 .collect(Collectors.groupingBy(Galochka::getDate, Collectors.reducing(BigDecimal.ZERO, Galochka::getValue, BigDecimal::add)));
 
@@ -123,16 +128,15 @@ public class MonthPageService {
 
         for (WeekDto week : weeks) {
             List<DaySummaryDto> days = week.days().stream()
-                    .map(day -> new DaySummaryDto(day.date(), totalsByDate.getOrDefault(day.date(), BigDecimal.ZERO)))
-                    .toList();
-
-            BigDecimal weekTotal = days.stream()
-                    .map(DaySummaryDto::total)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal incomingOverhead = overheadService.getIncomingOverhead(pageId, week.startDate());
-
-            result.add(new WeekSummaryDto(week.startDate(), weekTotal, incomingOverhead, days));
+                    .map(day -> new DaySummaryDto(
+                            day.date(),
+                            totalsByDate.getOrDefault(day.date(), BigDecimal.ZERO)
+                    )).toList();
+            BigDecimal weekTotal = days.stream().map(DaySummaryDto::total).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal incomingOverhead = overheadService.getIncomingOverhead(page.getId(), week.startDate());
+            BigDecimal effectiveTotal = weekTotal.add(incomingOverhead);
+            Integer percentage = calculatePercentage(effectiveTotal, page.getWeeklyNorm());
+            result.add(new WeekSummaryDto(week.startDate(), weekTotal, incomingOverhead, percentage, days));
         }
 
         return result;
@@ -144,7 +148,17 @@ public class MonthPageService {
         LocalDate start = weeks.get(0).startDate();
         LocalDate end = weeks.get(weeks.size() - 1).endDate();
         List<Galochka> galochki = galochkaRepository.findByActivityPageIdAndDateBetween(pageId, start, end);
-        return buildWeekSummaries(pageId, weeks, galochki);
+        return buildWeekSummaries(page, weeks, galochki);
+    }
+
+    private Integer calculatePercentage(BigDecimal effectiveTotal, BigDecimal weeklyNorm) {
+        if (weeklyNorm == null || weeklyNorm.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+
+        return effectiveTotal.multiply(BigDecimal.valueOf(100))
+                .divide(weeklyNorm, 0, RoundingMode.HALF_UP)
+                .intValue();
     }
 
     private LocalDate moveBackToWeekStart(LocalDate date, DayOfWeek weekStartDay) {

@@ -205,7 +205,8 @@ class PageWeekOverheadServiceIntegrationTest {
     }
 
     private GalochkiPage createPage(BigDecimal weeklyNorm) {
-        return pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, weeklyNorm);
+        return pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, weeklyNorm,
+                false, true, false);
     }
 
     private void saveMark(Activity activity, LocalDate date, BigDecimal value) {

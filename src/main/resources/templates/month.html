@@ -109,7 +109,9 @@
                th:data-page-type="${page.pageType()}"
                th:data-year="${page.yearMonth().year}"
                th:data-month="${page.yearMonth().monthValue}"
-               th:data-weekly-norm="${page.weeklyNorm()}">
+               th:data-weekly-norm="${page.weeklyNorm()}"
+               th:data-show-week-completed-check="${page.showWeekCompletedCheck()}"
+               th:data-show-week-percentage="${page.showWeekPercentage()}">
         <th:block th:each="group, groupStat : ${page.groups()}">
             <tr class="group-row"
                 th:classappend="${#lists.isEmpty(group.rows())} ? 'empty-group'"
@@ -210,7 +212,7 @@
             </tr>
         </th:block>
         </tbody>
-        <tfoot th:if="${page.weeklyNorm().signum() > 0}">
+        <tfoot th:if="${page.showStatistics()}">
         <tr class="summary-row">
             <td class="activity-name summary-label">Итого</td>
 
@@ -245,8 +247,17 @@
                             0
                         </span>
 
+                        <span class="week-percentage"
+                              th:if="${page.showWeekPercentage() and weekSummary.percentage() != null}"
+                              th:data-percentage-week-start="${weekSummary.weekStartDate()}"
+                              th:text="${weekSummary.percentage() + '%'}">
+                            0%
+                        </span>
+
                         <img class="week-completed-mark random-week-check"
-                             th:if="${effectiveTotal.compareTo(page.weeklyNorm()) >= 0}"
+                             th:if="${page.showWeekCompletedCheck()
+                                     and page.weeklyNorm().signum() > 0
+                                     and effectiveTotal.compareTo(page.weeklyNorm()) >= 0}"
                              th:data-check-key="${page.pageId() + '-' + page.weeks()[weekStat.index].days()[0].date()}"
                              th:data-week-index="${weekStat.index}"
                              th:data-month-key="${page.pageId() + '-' + page.yearMonth()}"

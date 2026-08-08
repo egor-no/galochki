@@ -17,8 +17,18 @@ public class GalochkiPageController {
     }
 
     @PostMapping("/pages")
-    public String create(@RequestParam String title, @RequestParam DayOfWeek weekStartDay, @RequestParam PageType pageType, @RequestParam(required = false) BigDecimal weeklyNorm) {
-        GalochkiPage page = pageService.create(title, weekStartDay, pageType, weeklyNorm);
+    public String create(
+            @RequestParam String title,
+            @RequestParam DayOfWeek weekStartDay,
+            @RequestParam PageType pageType,
+            @RequestParam(required = false) BigDecimal weeklyNorm,
+            @RequestParam(defaultValue = "false") boolean showStatisticsWithoutNorm,
+            @RequestParam(defaultValue = "false") boolean showWeekCompletedCheck,
+            @RequestParam(defaultValue = "false") boolean showWeekPercentage
+    ) {
+        GalochkiPage page = pageService.create(title, weekStartDay, pageType, weeklyNorm,
+                showStatisticsWithoutNorm, showWeekCompletedCheck,showWeekPercentage);
+
         return "redirect:/month?pageId=" + page.getId();
     }
 

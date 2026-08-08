@@ -130,7 +130,8 @@ class GalochkaServiceIntegrationTest {
     }
 
     private Activity createActivity(PageType pageType) {
-        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, pageType, new BigDecimal("5"));
+        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, pageType, new BigDecimal("5"),
+                false, true, false);
         return activityService.create(page.getId(), "Дело", null);
     }
 

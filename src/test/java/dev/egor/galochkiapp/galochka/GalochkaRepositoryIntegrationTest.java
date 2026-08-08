@@ -34,7 +34,8 @@ class GalochkaRepositoryIntegrationTest {
     @Test
     @DisplayName("База данных запрещает две галочки одного дела на одну дату")
     void rejectsDuplicateActivityAndDate() {
-        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
+        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"),
+                false, true, false);
         Activity activity = activityService.create(page.getId(), "Дело", null);
         LocalDate date = LocalDate.of(2026, 4, 10);
         galochkaRepository.saveAndFlush(mark(activity, date));

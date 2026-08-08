@@ -524,7 +524,7 @@ body.activities-edit-mode tr.activity-row .activity-name {
 }
 
 .summary-row td {
-    height: 92px;
+    height: 115px;
     vertical-align: top;
     border-top: 2px solid var(--ink) !important;
     padding-top: 5px !important;
@@ -654,4 +654,69 @@ body.activities-edit-mode tr.activity-row .activity-name {
 .page-edit-panel .edit-row,
 .page-create-panel .edit-row {
     margin-bottom: 0;
+}
+
+.week-percentage {
+    display: block;
+    margin-top: 2px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 22px;
+}
+
+.hand-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+}
+
+.hand-checkbox input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.hand-checkbox-mark {
+    position: relative;
+    width: 19px;
+    height: 19px;
+    border: 2px solid var(--ink);
+    transform: rotate(-2deg);
+}
+
+.hand-checkbox input:checked + .hand-checkbox-mark::after {
+    content: "✓";
+    position: absolute;
+    left: 1px;
+    top: -8px;
+    font-size: 27px;
+    font-weight: 700;
+    transform: rotate(-7deg);
+}
+
+.page-create-form {
+    display: block;
+}
+
+.page-create-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-create-settings-row {
+    margin-top: 12px;
+    min-height: 32px;
+}
+
+.norm-display-settings {
+    display: inline-flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.hand-checkbox:has(input:disabled) {
+    opacity: 0.55;
+    cursor: default;
 }

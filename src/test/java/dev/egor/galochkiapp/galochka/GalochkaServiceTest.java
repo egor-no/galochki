@@ -35,7 +35,7 @@ class GalochkaServiceTest {
 
     @Test
     void leftClickRecalculatesOverheadForBinary() {
-        stubExistingMark(PageType.BINARY);
+        stubExistingMark(PageType.BINARY, true);
 
         galochkaService.handleLeftClick(ACTIVITY_ID, DATE);
 
@@ -44,7 +44,7 @@ class GalochkaServiceTest {
 
     @Test
     void leftClickRecalculatesOverheadForHalfStep() {
-        stubExistingMark(PageType.HALF_STEP);
+        stubExistingMark(PageType.HALF_STEP, true);
 
         galochkaService.handleLeftClick(ACTIVITY_ID, DATE);
 
@@ -53,7 +53,7 @@ class GalochkaServiceTest {
 
     @Test
     void numericValueDoesNotRecalculateOverheadForNumber() {
-        stubExistingMark(PageType.NUMBER);
+        stubExistingMark(PageType.NUMBER, false);
 
         galochkaService.setNumericValue(ACTIVITY_ID, DATE, new BigDecimal("-2.5"));
 
@@ -62,18 +62,36 @@ class GalochkaServiceTest {
 
     @Test
     void resetDoesNotRecalculateOverheadForNumber() {
-        stubExistingMark(PageType.NUMBER);
+        stubExistingMark(PageType.NUMBER, false);
 
         galochkaService.reset(ACTIVITY_ID, DATE);
 
         verify(overheadService, never()).recalculateFrom(PAGE_ID, DATE);
     }
 
-    private void stubExistingMark(PageType pageType) {
+    @Test
+    void leftClickDoesNotRecalculateOverheadForBinaryWithoutNorm() {
+        stubExistingMark(PageType.BINARY, false);
+
+        galochkaService.handleLeftClick(ACTIVITY_ID, DATE);
+
+        verify(overheadService, never()).recalculateFrom(PAGE_ID, DATE);
+    }
+
+    @Test
+    void leftClickDoesNotRecalculateOverheadForHalfStepWithoutNorm() {
+        stubExistingMark(PageType.HALF_STEP, false);
+
+        galochkaService.handleLeftClick(ACTIVITY_ID, DATE);
+
+        verify(overheadService, never()).recalculateFrom(PAGE_ID, DATE);
+    }
+
+    private void stubExistingMark(PageType pageType, boolean hasWeeklyNorm) {
         GalochkiPage page = mock(GalochkiPage.class);
         lenient().when(page.getPageType()).thenReturn(pageType);
         lenient().when(page.getId()).thenReturn(PAGE_ID);
-        lenient().when(page.supportsWeeklyNorm()).thenReturn(pageType != PageType.NUMBER);
+        lenient().when(page.hasWeeklyNorm()).thenReturn(hasWeeklyNorm);
         Activity activity = new Activity();
         activity.setPage(page);
         Galochka mark = new Galochka();

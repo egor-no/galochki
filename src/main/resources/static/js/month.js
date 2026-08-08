@@ -61,12 +61,35 @@ function updateWeekSummaries(summaries) {
 
         if (weekBox) {
             const effectiveTotal = Number(summary.weekTotal) + Number(summary.incomingOverhead);
-            weekBox.textContent = formatValue(effectiveTotal);
-            updateWeekCompletedMark(weekBox, effectiveTotal >= norm);
+            const showCompletedCheck = tbody.dataset.showWeekCompletedCheck === 'true';
+            const showPercentage = tbody.dataset.showWeekPercentage === 'true';
+
+            if (weekBox) {
+                const effectiveTotal = Number(summary.weekTotal) + Number(summary.incomingOverhead);
+                weekBox.textContent = formatValue(effectiveTotal);
+
+                if (showCompletedCheck && norm > 0) {
+                    updateWeekCompletedMark(weekBox, effectiveTotal >= norm);
+                }
+
+                if (showPercentage) {
+                    updateWeekPercentage(summary.weekStartDate, summary.percentage);
+                }
+            }
         }
 
         updateOverhead(summary.weekStartDate, summary.incomingOverhead);
     });
+}
+
+function updateWeekPercentage(weekStartDate, percentage) {
+    const element = document.querySelector(
+        `[data-percentage-week-start="${weekStartDate}"]`
+    );
+
+    if (!element || percentage == null) return;
+
+    element.textContent = `${percentage}%`;
 }
 
 function updateWeekCompletedMark(weekBox, completed) {
@@ -238,20 +261,10 @@ function togglePageCreate() {
 }
 
 function toggleActivitiesEdit() {
-    const enabled = document.body.classList.toggle('activities-edit-mode');
+    document.body.classList.toggle('activities-edit-mode');
 
     const tbody = document.getElementById('activityRows');
     if (tbody) updateDraggableRows(tbody);
-
-    const url = new URL(window.location.href);
-
-    if (enabled) {
-        url.searchParams.set('editActivities', 'true');
-    } else {
-        url.searchParams.delete('editActivities');
-    }
-
-    window.history.replaceState({}, '', url);
 }
 
 document.addEventListener('submit', function (event) {
@@ -365,6 +378,19 @@ function refreshGroupSelectOptions() {
 }
 
 document.addEventListener('submit', function (event) {
+    const form = event.target;
+
+    if (
+        form.matches('form[action="/activities"]') ||
+        form.matches('form[action="/activity-groups"]') ||
+        form.matches('form[action="/activities/delete"]') ||
+        form.matches('form[action="/activity-groups/delete"]')
+    ) {
+        sessionStorage.setItem('activities-edit-mode', 'true');
+    }
+});
+
+document.addEventListener('submit', function (event) {
     const form = event.target.closest('.group-title-form');
 
     if (!form) {
@@ -429,14 +455,38 @@ function updateWeeklyNormField(form) {
     const pageType = form.querySelector('.page-type-select');
     const normField = form.querySelector('.weekly-norm-field');
     const normInput = form.querySelector('input[name="weeklyNorm"]');
+    const statsSetting = form.querySelector('.stats-without-norm-setting');
+    const statsCheckbox = form.querySelector('input[name="showStatisticsWithoutNorm"]');
+    const normSettings = form.querySelector('.norm-display-settings');
 
     if (!pageType || !normField || !normInput) return;
 
     const numeric = pageType.value === 'NUMBER';
+    const hasNorm = Number(normInput.value) > 0;
+
     normField.style.display = numeric ? 'none' : '';
     normInput.disabled = numeric;
 
-    if (numeric) normInput.value = '';
+    if (statsSetting) {
+        statsSetting.style.display = numeric ? 'none' : '';
+    }
+
+    if (statsCheckbox) {
+        if (hasNorm) {
+            statsCheckbox.checked = true;
+            statsCheckbox.disabled = true;
+        } else {
+            statsCheckbox.disabled = false;
+        }
+    }
+
+    if (normSettings) {
+        normSettings.style.display = !numeric && hasNorm ? '' : 'none';
+    }
+
+    if (numeric) {
+        normInput.value = '';
+    }
 }
 
 function updateDraggableRows(tbody) {
@@ -570,11 +620,24 @@ function saveActivityOrder(tbody) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    if (sessionStorage.getItem('activities-edit-mode') === 'true') {
+        document.body.classList.add('activities-edit-mode');
+        sessionStorage.removeItem('activities-edit-mode');
+    }
+
     document.querySelectorAll('.page-create-form').forEach(form => {
         updateWeeklyNormField(form);
 
-        const select = form.querySelector('.page-type-select');
-        if (select) select.addEventListener('change', () => updateWeeklyNormField(form));
+        const typeSelect = form.querySelector('.page-type-select');
+        const normInput = form.querySelector('input[name="weeklyNorm"]');
+
+        if (typeSelect) {
+            typeSelect.addEventListener('change', () => updateWeeklyNormField(form));
+        }
+
+        if (normInput) {
+            normInput.addEventListener('input', () => updateWeeklyNormField(form));
+        }
     });
 
     const tbody = document.getElementById('activityRows');

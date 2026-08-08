@@ -49,7 +49,7 @@ class MonthPageServiceIntegrationTest {
     @Test
     @DisplayName("Месячная модель содержит страницу, дела и значения галочек на всех показанных днях")
     void buildsCompleteMonthPageModel() {
-        GalochkiPage page = pageService.create("Апрель", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
+        GalochkiPage page = createPage("Апрель", new BigDecimal("10"));
         Activity activity = activityService.create(page.getId(), "Зарядка", null);
         saveMark(activity, LocalDate.of(2026, 4, 10));
 
@@ -73,7 +73,7 @@ class MonthPageServiceIntegrationTest {
     @Test
     @DisplayName("Группы в месячной модели следуют сохранённому sortOrder")
     void displaysGroupsInPersistedOrder() {
-        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
+        GalochkiPage page = createPage("Страница", new BigDecimal("10"));
         ActivityGroup first = groupService.create(page.getId(), "Первая");
         ActivityGroup second = groupService.create(page.getId(), "Вторая");
         activityService.create(page.getId(), "Дело 1", first.getId());
@@ -92,7 +92,7 @@ class MonthPageServiceIntegrationTest {
     @Test
     @DisplayName("Блок «Без группы» отображается после всех именованных групп")
     void displaysUngroupedActivitiesLast() {
-        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
+        GalochkiPage page = createPage("Страница", new BigDecimal("10"));
         ActivityGroup group = groupService.create(page.getId(), "Именованная группа");
         Activity grouped = activityService.create(page.getId(), "В группе", group.getId());
         Activity ungrouped = activityService.create(page.getId(), "Без группы", null);
@@ -111,7 +111,7 @@ class MonthPageServiceIntegrationTest {
     @Test
     @DisplayName("Апрель 2026 при начале недели в понедельник строится как пять полных недель")
     void buildsFullWeeksFromConfiguredWeekStart() {
-        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
+        GalochkiPage page = createPage("Страница", new BigDecimal("10"));
 
         MonthPageDto result = monthPageService.build(page.getId(), YearMonth.of(2026, 4));
 
@@ -127,7 +127,7 @@ class MonthPageServiceIntegrationTest {
     @Test
     @DisplayName("Недельная сводка содержит суммы дней, сумму недели и входящий оверхэд")
     void buildsWeekSummariesWithDailyTotalsAndIncomingOverhead() {
-        GalochkiPage page = pageService.create("Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
+        GalochkiPage page = createPage("Страница", new BigDecimal("10"));
         Activity first = activityService.create(page.getId(), "Первое", null);
         Activity second = activityService.create(page.getId(), "Второе", null);
         saveMark(first, LocalDate.of(2026, 3, 30), new BigDecimal("2"));
@@ -156,6 +156,70 @@ class MonthPageServiceIntegrationTest {
                 .isEqualTo(BigDecimal.ZERO);
     }
 
+    @Test
+    @DisplayName("Настройки отображения страницы и вычисленное showStatistics попадают в месячную модель")
+    void passesDisplaySettingsAndStatisticsVisibilityToMonthPage() {
+        GalochkiPage page = pageService.create(
+                "Страница", DayOfWeek.MONDAY, PageType.BINARY, BigDecimal.ZERO,
+                true, false, true);
+
+        MonthPageDto result = monthPageService.build(page.getId(), YearMonth.of(2026, 4));
+
+        assertThat(result.showStatisticsWithoutNorm()).isTrue();
+        assertThat(result.showWeekCompletedCheck()).isFalse();
+        assertThat(result.showWeekPercentage()).isTrue();
+        assertThat(result.showStatistics()).isEqualTo(page.shouldShowStatistics()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Наличие недельной нормы включает статистику независимо от showStatisticsWithoutNorm")
+    void showsStatisticsWithWeeklyNormWhenExplicitSettingIsDisabled() {
+        GalochkiPage page = pageService.create(
+                "Страница", DayOfWeek.MONDAY, PageType.HALF_STEP, BigDecimal.TEN,
+                false, true, false);
+
+        MonthPageDto result = monthPageService.build(page.getId(), YearMonth.of(2026, 4));
+
+        assertThat(result.showStatistics()).isEqualTo(page.shouldShowStatistics()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Процент недели округляется HALF_UP от effectiveTotal")
+    void calculatesRoundedWeekPercentage() {
+        GalochkiPage page = createPage("Страница", BigDecimal.TEN);
+        Activity activity = activityService.create(page.getId(), "Дело", null);
+        saveMark(activity, LocalDate.of(2026, 4, 1), new BigDecimal("7.5"));
+
+        MonthPageDto result = monthPageService.build(page.getId(), YearMonth.of(2026, 4));
+
+        assertThat(result.weekSummaries().get(0).percentage()).isEqualTo(75);
+    }
+
+    @Test
+    @DisplayName("Входящий оверхэд участвует в проценте, а перевыполнение не ограничивается 100%")
+    void includesIncomingOverheadInPercentageAboveOneHundred() {
+        GalochkiPage page = createPage("Страница", BigDecimal.TEN);
+        Activity activity = activityService.create(page.getId(), "Дело", null);
+        LocalDate weekStart = LocalDate.of(2026, 3, 30);
+        saveMark(activity, LocalDate.of(2026, 4, 1), BigDecimal.TEN);
+        overheadService.saveOrDeleteOverhead(page.getId(), weekStart, new BigDecimal("2.5"));
+
+        MonthPageDto result = monthPageService.build(page.getId(), YearMonth.of(2026, 4));
+
+        assertThat(result.weekSummaries().get(0).percentage()).isEqualTo(125);
+    }
+
+    @Test
+    @DisplayName("При нулевой недельной норме процент отсутствует")
+    void hasNullPercentageWithoutWeeklyNorm() {
+        GalochkiPage page = createPage("Страница", BigDecimal.ZERO);
+
+        MonthPageDto result = monthPageService.build(page.getId(), YearMonth.of(2026, 4));
+
+        assertThat(result.weekSummaries()).allSatisfy(summary ->
+                assertThat(summary.percentage()).isNull());
+    }
+
     private void saveMark(Activity activity, LocalDate date) {
         saveMark(activity, date, BigDecimal.ONE);
     }
@@ -166,5 +230,10 @@ class MonthPageServiceIntegrationTest {
         mark.setDate(date);
         mark.setValue(value);
         galochkaRepository.saveAndFlush(mark);
+    }
+
+    private GalochkiPage createPage(String title, BigDecimal weeklyNorm) {
+        return pageService.create(title, DayOfWeek.MONDAY, PageType.HALF_STEP, weeklyNorm,
+                false, true, false);
     }
 }

@@ -35,6 +35,15 @@ public class GalochkiPage {
     @Column(name = "page_type", nullable = false)
     private PageType pageType = PageType.HALF_STEP;
 
+    @Column(name = "show_statistics_without_norm", nullable = false)
+    private boolean showStatisticsWithoutNorm = false;
+
+    @Column(name = "show_week_completed_check", nullable = false)
+    private boolean showWeekCompletedCheck = true;
+
+    @Column(name = "show_week_percentage", nullable = false)
+    private boolean showWeekPercentage = false;
+
     public Long getId() {
         return id;
     }
@@ -86,4 +95,39 @@ public class GalochkiPage {
     public boolean supportsWeeklyNorm() {
         return pageType != null && pageType != PageType.NUMBER;
     }
+
+    public boolean isShowStatisticsWithoutNorm() {
+        return showStatisticsWithoutNorm;
+    }
+
+    public void setShowStatisticsWithoutNorm(boolean showStatisticsWithoutNorm) {
+        this.showStatisticsWithoutNorm = showStatisticsWithoutNorm;
+    }
+
+    public boolean isShowWeekCompletedCheck() {
+        return showWeekCompletedCheck;
+    }
+
+    public void setShowWeekCompletedCheck(boolean showWeekCompletedCheck) {
+        this.showWeekCompletedCheck = showWeekCompletedCheck;
+    }
+
+    public boolean isShowWeekPercentage() {
+        return showWeekPercentage;
+    }
+
+    public void setShowWeekPercentage(boolean showWeekPercentage) {
+        this.showWeekPercentage = showWeekPercentage;
+    }
+
+    public boolean hasWeeklyNorm() {
+        return supportsWeeklyNorm()
+                && weeklyNorm != null
+                && weeklyNorm.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    public boolean shouldShowStatistics() {
+        return hasWeeklyNorm() || showStatisticsWithoutNorm;
+    }
+    
 }

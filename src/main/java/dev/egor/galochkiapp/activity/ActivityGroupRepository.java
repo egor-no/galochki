@@ -9,4 +9,6 @@ public interface ActivityGroupRepository extends JpaRepository<ActivityGroup, Lo
     List<ActivityGroup> findByPageIdOrderBySortOrderAscIdAsc(Long pageId);
 
     int countByPageId(Long pageId);
+
+    void deleteByPageId(Long pageId);
 }

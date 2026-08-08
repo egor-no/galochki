@@ -156,6 +156,7 @@ class ActivityServiceIntegrationTest {
     }
 
     private GalochkiPage createPage() {
-        return pageService.create("Тестовая страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"));
+        return pageService.create("Тестовая страница", DayOfWeek.MONDAY, PageType.HALF_STEP, new BigDecimal("10"),
+                false, true, false);
     }
 }

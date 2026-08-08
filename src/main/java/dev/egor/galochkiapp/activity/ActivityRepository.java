@@ -21,4 +21,6 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     int countByPageIdAndActiveTrue(Long pageId);
 
     int countByPageIdAndGroupIdAndActiveTrue(Long pageId, Long groupId);
+
+    void deleteByPageId(Long pageId);
 }

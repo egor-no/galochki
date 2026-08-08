@@ -94,7 +94,7 @@ public class GalochkaService {
 
     private void recalculateNormIfSupported(Galochka galochka, LocalDate date) {
 
-        if (!galochka.getActivity().getPage().supportsWeeklyNorm()) {
+        if (!galochka.getActivity().getPage().hasWeeklyNorm()) {
             return;
         }
 

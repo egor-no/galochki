@@ -1,5 +1,7 @@
 package dev.egor.galochkiapp.page;
 
+import dev.egor.galochkiapp.activity.ActivityGroupRepository;
+import dev.egor.galochkiapp.activity.ActivityRepository;
 import dev.egor.galochkiapp.galochka.GalochkaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,11 +19,19 @@ public class GalochkiPageService {
     private final GalochkiPageRepository pageRepository;
     private final GalochkaRepository galochkaRepository;
     private final PageWeekOverheadRepository overheadRepository;
+    private final ActivityGroupRepository groupRepository;
+    private final ActivityRepository activityRepository;
 
-    public GalochkiPageService(GalochkiPageRepository pageRepository, GalochkaRepository galochkaRepository, PageWeekOverheadRepository overheadRepository) {
+    public GalochkiPageService(GalochkiPageRepository pageRepository,
+                               GalochkaRepository galochkaRepository,
+                               PageWeekOverheadRepository overheadRepository,
+                               ActivityRepository activityRepository,
+                               ActivityGroupRepository groupRepository) {
         this.pageRepository = pageRepository;
         this.galochkaRepository = galochkaRepository;
         this.overheadRepository = overheadRepository;
+        this.activityRepository = activityRepository;
+        this.groupRepository = groupRepository;
     }
 
     public Long getCurrentOwnerId() {
@@ -44,21 +54,42 @@ public class GalochkiPageService {
     }
 
     @Transactional
+    public void updateDisplaySettingsForCurrentOwner(Long pageId, String title, boolean showStatisticsWithoutNorm, boolean showWeekCompletedCheck, boolean showWeekPercentage) {
+        GalochkiPage page = getByIdForCurrentOwner(pageId);
+        page.setTitle(title);
+        if (page.getPageType() == PageType.NUMBER) {
+            page.setShowStatisticsWithoutNorm(false);
+            page.setShowWeekCompletedCheck(false);
+            page.setShowWeekPercentage(false);
+            return;
+        }
+        page.setShowStatisticsWithoutNorm(showStatisticsWithoutNorm);
+        page.setShowWeekCompletedCheck(showWeekCompletedCheck);
+        page.setShowWeekPercentage(showWeekPercentage);
+    }
+
+    @Transactional
     public void deleteForCurrentOwner(Long pageId) {
         GalochkiPage page = getByIdForCurrentOwner(pageId);
 
-        overheadRepository.deleteByPageId(pageId);
         galochkaRepository.deleteByActivityPageId(pageId);
+        activityRepository.deleteByPageId(pageId);
+        groupRepository.deleteByPageId(pageId);
+        overheadRepository.deleteByPageId(pageId);
+
         pageRepository.delete(page);
     }
 
     @Transactional
-    public GalochkiPage create(String title, DayOfWeek weekStartDay, PageType pageType, BigDecimal weeklyNorm) {
+    public GalochkiPage create(String title, DayOfWeek weekStartDay, PageType pageType, BigDecimal weeklyNorm, boolean showStatisticsWithoutNorm, boolean showWeekCompletedCheck, boolean showWeekPercentage) {
         if (pageType == null) {
-            throw new IllegalArgumentException("Необходимо выбрать тип страницы");
+            throw new IllegalArgumentException(
+                    "Необходимо выбрать тип страницы"
+            );
         }
 
         BigDecimal normalizedWeeklyNorm;
+
         if (pageType == PageType.NUMBER) {
             normalizedWeeklyNorm = BigDecimal.ZERO;
         } else {
@@ -71,6 +102,15 @@ public class GalochkiPageService {
         page.setWeekStartDay(weekStartDay);
         page.setPageType(pageType);
         page.setWeeklyNorm(normalizedWeeklyNorm);
+        if (pageType == PageType.NUMBER) {
+            page.setShowStatisticsWithoutNorm(false);
+            page.setShowWeekCompletedCheck(false);
+            page.setShowWeekPercentage(false);
+        } else {
+            page.setShowStatisticsWithoutNorm(showStatisticsWithoutNorm);
+            page.setShowWeekCompletedCheck(showWeekCompletedCheck);
+            page.setShowWeekPercentage(showWeekPercentage);
+        }
         page.setOwnerId(getCurrentOwnerId());
         return pageRepository.save(page);
     }
